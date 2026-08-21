@@ -5407,7 +5407,19 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
         let head,col,body;
         if(!mp.hasT){col="var(--warn)";head="⚠ Challenge check needs dated data";body="This data has no timestamps, so the day-by-day rules can't be replayed. Upload dated CSV / Update ALL pairs (step 4) for a real challenge verdict.";}
         else{const pr=Math.round(mp.passRate*100),mr=Math.round(mp.maxRate*100),dr=Math.round(mp.dailyRate*100);
-          if(mp.passRate>=0.7){col="var(--buy)";head="✓ PASSES "+firm+" reliably";body=`Hits the ${tgt}% target from <b>${pr}%</b> of ${mp.attempts} realistic start dates (median <b>${mp.medDays}</b> trading days) — without breaching the daily ${S.prop.daily}% or ${S.prop.ddType} ${S.prop.max}% limit.`;}
+          if(mp.passRate>=0.7){
+            // A reliable CHALLENGE pass can still hide two real problems the sprint verdict misses:
+            // (1) the FUNDED-account full-run drawdown, and (2) a stale edge that stopped trading. Surface both, honestly.
+            let fullDD=null, recentN=null;
+            try{ fullDD=compoundR(simulate(bars,g),mm).maxDDpct; }catch(e){}
+            try{ const rw=Math.max(20,Math.round(bpd*10)); recentN=simDetailed(bars.slice(Math.max(0,bars.length-rw)),g).length; }catch(e){}
+            const caveats=[];
+            if(fullDD!=null && S.prop.max!=null && fullDD>S.prop.max) caveats.push(`As a <b>funded account</b> the full-run drawdown reaches <b>${fullDD.toFixed(1)}%</b> — past the ${S.prop.max}% limit. You pass the sprint to +${tgt}% before it builds, but must cut risk once funded or it breaches.`);
+            if(recentN===0) caveats.push(`<b>No trades in the most recent window</b> — the edge is dormant lately, so this pass rests on older data. The last few weeks prove nothing; forward-test before trusting it.`);
+            if(mp.attempts!=null && mp.attempts<5) caveats.push(`Only <b>${mp.attempts}</b> start dates tested — too small a sample to call "reliable". Load deeper data (step 4) for a real read.`);
+            if(caveats.length){col="var(--warn)";head="◐ Passes the challenge — but read the caveats";body=`Hits the ${tgt}% target from <b>${pr}%</b> of ${mp.attempts} start dates (median <b>${mp.medDays}</b> days), <b>but</b>:<br>• `+caveats.join("<br>• ");}
+            else{col="var(--buy)";head="✓ PASSES "+firm+" reliably";body=`Hits the ${tgt}% target from <b>${pr}%</b> of ${mp.attempts} realistic start dates (median <b>${mp.medDays}</b> trading days) — without breaching the daily ${S.prop.daily}% or ${S.prop.ddType} ${S.prop.max}% limit, and the full-run drawdown stays inside ${S.prop.max}%.`;}
+          }
           else if(mp.passRate>=0.4){col="var(--warn)";head="◐ Coin-flip — passes only sometimes";body=`Reaches the ${tgt}% target from just <b>${pr}%</b> of ${mp.attempts} start dates. Breaches the ${S.prop.ddType} ${S.prop.max}% DD from ${mr}% of them and the daily ${S.prop.daily}% from ${dr}%. One lucky run can look green — the projections below show the real drawdown. Re-run step 23 to harden it.`;}
           else{col="var(--sell)";head="✗ Would FAIL most attempts";body=`Only passes from <b>${pr}%</b> of ${mp.attempts} realistic start dates — breaches the ${S.prop.ddType} ${S.prop.max}% max DD from <b>${mr}%</b> and the daily ${S.prop.daily}% from ${dr}%. That is why a single run can flash "pass" while the projections below blow well past ${S.prop.max}%. Do NOT take this to a real challenge — re-run step 23, lower risk %, or pick a smoother strategy.`;}
         }
