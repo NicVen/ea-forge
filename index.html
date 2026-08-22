@@ -182,13 +182,13 @@
 
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<title>EA Forge V2.44 — AI Algorithm Builder</title>
+<title>EA Forge V2.45 — AI Algorithm Builder</title>
 <div class="wrap">
 <header>
   <div class="brand">
     <div class="mark">EA</div>
     <div>
-      <b>EA Forge <span id="appVer" class="verpill">V2.44</span></b><br><span>algorithm builder · mt5 + pine</span>
+      <b>EA Forge <span id="appVer" class="verpill">V2.45</span></b><br><span>algorithm builder · mt5 + pine</span>
     </div>
   </div>
   <div class="spacer"></div>
@@ -598,7 +598,9 @@
           </div>
           <div class="row c3" style="margin-top:12px">
             <div><label class="fl">Phase</label><select id="ppPhase"><option value="challenge" selected>Challenge — hit the target</option><option value="funded">Funded — pace to payout</option></select></div>
-            <div><label class="fl">Consistency % (0=off)</label><input type="number" id="ppConsist" value="0" step="1" min="0" max="100"></div>
+            <div><label class="fl">Consistency % (max 1-day profit share)</label>
+              <select id="ppConsist"><option value="0" selected>Off</option><option value="10">10%</option><option value="15">15%</option><option value="20">20%</option><option value="25">25%</option><option value="30">30%</option><option value="35">35%</option><option value="40">40%</option><option value="45">45%</option><option value="50">50%</option><option value="custom">Custom…</option></select>
+              <input type="number" id="ppConsistCustom" value="20" step="1" min="1" max="100" placeholder="enter %" style="display:none;margin-top:6px"></div>
             <div><label class="fl">Withdrawal target $ (0=off)</label><input type="number" id="ppWithdraw" value="0" step="50" min="0"></div>
           </div>
           <div class="hint"><b>Funded phase:</b> no profit target — the EA banks at most <b>Consistency%</b> of the withdrawal target each day (so no single day breaches the firm's consistency rule), then <b>stops when total profit reaches the Withdrawal target</b>, ready to pay out. Consistency auto-fills from the firm when known; edit to match your plan.</div>
@@ -1513,7 +1515,7 @@ $("#ppToggle").onclick=()=>{S.prop.on=!S.prop.on;renderMeta();buildCode();};
 $("#ppPreset").onchange=e=>{S.prop.preset=e.target.value;const p=PROP_PRESETS[e.target.value];if(p&&p.daily){S.prop.daily=p.daily;S.prop.max=p.max;if(p.target!=null)S.prop.target=p.target;if(p.ddType)S.prop.ddType=p.ddType;
   // sync the visible inputs so the firm's real rules show (was leaving target/type stale → banner said 10% on an 8% firm)
   if(p.consist!=null)S.prop.consist=p.consist;
-  const sync=(id,v)=>{const el=$(id);if(el&&v!=null)el.value=v;};sync("#ppDaily",S.prop.daily);sync("#ppMax",S.prop.max);sync("#ppTarget",S.prop.target);sync("#ppConsist",S.prop.consist);const pt=$("#ppType");if(pt&&S.prop.ddType)pt.value=S.prop.ddType;}renderMeta();buildCode();};
+  const sync=(id,v)=>{const el=$(id);if(el&&v!=null)el.value=v;};sync("#ppDaily",S.prop.daily);sync("#ppMax",S.prop.max);sync("#ppTarget",S.prop.target);setConsistUI(S.prop.consist);const pt=$("#ppType");if(pt&&S.prop.ddType)pt.value=S.prop.ddType;}renderMeta();buildCode();};
 $("#ppInit").oninput=e=>{S.prop.init=parseFloat(e.target.value)||0;buildCode();};
 $("#ppDaily").oninput=e=>{S.prop.daily=parseFloat(e.target.value)||0;S.prop.preset="custom";renderMeta();buildCode();};
 $("#ppMax").oninput=e=>{S.prop.max=parseFloat(e.target.value)||0;S.prop.preset="custom";renderMeta();buildCode();};
@@ -1523,7 +1525,9 @@ $("#ppTarget").oninput=e=>{S.prop.target=parseFloat(e.target.value)||0;};
 $("#ppRisk").oninput=e=>{S.prop.riskPct=parseFloat(e.target.value)||1;};
 $("#ppMinDays").oninput=e=>{S.prop.minDays=parseInt(e.target.value)||0;};
 $("#ppPhase").onchange=e=>{S.prop.phase=e.target.value;renderMeta();buildCode();};
-$("#ppConsist").oninput=e=>{S.prop.consist=Math.max(0,Math.min(100,parseFloat(e.target.value)||0));buildCode();};
+$("#ppConsist").onchange=e=>{if(e.target.value==="custom"){const ci=$("#ppConsistCustom");if(ci){ci.style.display="";S.prop.consist=Math.max(0,Math.min(100,parseFloat(ci.value)||0));}}else{const ci=$("#ppConsistCustom");if(ci)ci.style.display="none";S.prop.consist=parseFloat(e.target.value)||0;}buildCode();};
+$("#ppConsistCustom").oninput=e=>{S.prop.consist=Math.max(0,Math.min(100,parseFloat(e.target.value)||0));buildCode();};
+function setConsistUI(v){const sel=$("#ppConsist");if(!sel)return;const opt=[...sel.options].find(o=>o.value===String(v));const ci=$("#ppConsistCustom");if(opt){sel.value=String(v);if(ci)ci.style.display="none";}else{sel.value="custom";if(ci){ci.style.display="";ci.value=v;}}}
 $("#ppWithdraw").oninput=e=>{S.prop.withdraw=Math.max(0,parseFloat(e.target.value)||0);buildCode();};
 
 /* ATM scale-out */
