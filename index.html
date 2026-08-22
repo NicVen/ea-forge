@@ -182,13 +182,13 @@
 
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<title>EA Forge V2.43 — AI Algorithm Builder</title>
+<title>EA Forge V2.44 — AI Algorithm Builder</title>
 <div class="wrap">
 <header>
   <div class="brand">
     <div class="mark">EA</div>
     <div>
-      <b>EA Forge <span id="appVer" class="verpill">V2.43</span></b><br><span>algorithm builder · mt5 + pine</span>
+      <b>EA Forge <span id="appVer" class="verpill">V2.44</span></b><br><span>algorithm builder · mt5 + pine</span>
     </div>
   </div>
   <div class="spacer"></div>
@@ -596,6 +596,12 @@
             <div><label class="fl">Risk per trade %</label><input type="number" id="ppRisk" value="1" step="0.25"></div>
             <div><label class="fl">Min trading days</label><input type="number" id="ppMinDays" value="0"></div>
           </div>
+          <div class="row c3" style="margin-top:12px">
+            <div><label class="fl">Phase</label><select id="ppPhase"><option value="challenge" selected>Challenge — hit the target</option><option value="funded">Funded — pace to payout</option></select></div>
+            <div><label class="fl">Consistency % (0=off)</label><input type="number" id="ppConsist" value="0" step="1" min="0" max="100"></div>
+            <div><label class="fl">Withdrawal target $ (0=off)</label><input type="number" id="ppWithdraw" value="0" step="50" min="0"></div>
+          </div>
+          <div class="hint"><b>Funded phase:</b> no profit target — the EA banks at most <b>Consistency%</b> of the withdrawal target each day (so no single day breaches the firm's consistency rule), then <b>stops when total profit reaches the Withdrawal target</b>, ready to pay out. Consistency auto-fills from the firm when known; edit to match your plan.</div>
           <div class="hint">Used by the challenge check: it converts each trade's R into % of account (1R = your risk-per-trade %), then tests if the strategy reaches the target before breaching drawdown. Shown after Run backtest / Auto-evolve.</div>
           <div class="hint">MQL5: tracks equity vs daily anchor + initial balance, halts when either limit hit. Pine: same via strategy.equity. Static (absolute) DD off initial balance — matches FundedNext Stellar / FTMO. Trailing-DD firms differ.</div>
         </div>
@@ -1313,7 +1319,7 @@ let S={
   longRules:["hma_up","macd_up","psar_up"],shortRules:["macd_dn","hma_dn","psar_dn"],combine:"AND",
   sizeMode:"riskpct",size:1,slMode:"atr",sl:2,tp:3,trail:"atr",spread:25,sess:"off",max:1,
   markov:{on:false,file:"markov_regime.txt",common:true},
-  prop:{on:false,preset:"fnstellar",init:6000,daily:5,max:10,halt:true,ddType:"static",target:10,riskPct:1,minDays:0},
+  prop:{on:false,preset:"fnstellar",init:6000,daily:5,max:10,halt:true,ddType:"static",target:10,riskPct:1,minDays:0,phase:"challenge",consist:0,withdraw:0},
   custom:[],
   exits:{bars:0,opposite:false},exitLong:[],exitShort:[],
   workflow:[],
@@ -1506,7 +1512,8 @@ $("#mkCommon").onchange=e=>{S.markov.common=e.target.value==="1";buildCode();};
 $("#ppToggle").onclick=()=>{S.prop.on=!S.prop.on;renderMeta();buildCode();};
 $("#ppPreset").onchange=e=>{S.prop.preset=e.target.value;const p=PROP_PRESETS[e.target.value];if(p&&p.daily){S.prop.daily=p.daily;S.prop.max=p.max;if(p.target!=null)S.prop.target=p.target;if(p.ddType)S.prop.ddType=p.ddType;
   // sync the visible inputs so the firm's real rules show (was leaving target/type stale → banner said 10% on an 8% firm)
-  const sync=(id,v)=>{const el=$(id);if(el&&v!=null)el.value=v;};sync("#ppDaily",S.prop.daily);sync("#ppMax",S.prop.max);sync("#ppTarget",S.prop.target);const pt=$("#ppType");if(pt&&S.prop.ddType)pt.value=S.prop.ddType;}renderMeta();buildCode();};
+  if(p.consist!=null)S.prop.consist=p.consist;
+  const sync=(id,v)=>{const el=$(id);if(el&&v!=null)el.value=v;};sync("#ppDaily",S.prop.daily);sync("#ppMax",S.prop.max);sync("#ppTarget",S.prop.target);sync("#ppConsist",S.prop.consist);const pt=$("#ppType");if(pt&&S.prop.ddType)pt.value=S.prop.ddType;}renderMeta();buildCode();};
 $("#ppInit").oninput=e=>{S.prop.init=parseFloat(e.target.value)||0;buildCode();};
 $("#ppDaily").oninput=e=>{S.prop.daily=parseFloat(e.target.value)||0;S.prop.preset="custom";renderMeta();buildCode();};
 $("#ppMax").oninput=e=>{S.prop.max=parseFloat(e.target.value)||0;S.prop.preset="custom";renderMeta();buildCode();};
@@ -1515,6 +1522,9 @@ $("#ppType").onchange=e=>{S.prop.ddType=e.target.value;buildCode();};
 $("#ppTarget").oninput=e=>{S.prop.target=parseFloat(e.target.value)||0;};
 $("#ppRisk").oninput=e=>{S.prop.riskPct=parseFloat(e.target.value)||1;};
 $("#ppMinDays").oninput=e=>{S.prop.minDays=parseInt(e.target.value)||0;};
+$("#ppPhase").onchange=e=>{S.prop.phase=e.target.value;renderMeta();buildCode();};
+$("#ppConsist").oninput=e=>{S.prop.consist=Math.max(0,Math.min(100,parseFloat(e.target.value)||0));buildCode();};
+$("#ppWithdraw").oninput=e=>{S.prop.withdraw=Math.max(0,parseFloat(e.target.value)||0);buildCode();};
 
 /* ATM scale-out */
 function renderATM(){
@@ -1727,6 +1737,9 @@ function genMQL5(){
       o.push(`input double InpMaxDD      = ${S.prop.max};  // % max loss halt`);
       o.push(`input bool   InpTrailDD    = ${S.prop.ddType==="trailing"?"true":"false"}; // max DD trails equity peak`);
       o.push(`input bool   InpCloseOnDD  = ${S.prop.halt?"true":"false"}; // flatten on breach`);
+      o.push(`input bool   InpFundedMode = ${S.prop.phase==="funded"?"true":"false"}; // funded: pace to payout under consistency (no profit target)`);
+      o.push(`input double InpConsistPct = ${S.prop.consist||0};   // max % of total profit allowed in ONE day (0=off)`);
+      o.push(`input double InpWithdrawTgt= ${S.prop.withdraw||0};  // stop when profit since funded reaches this $ (0=off)`);
     }
     if(S.atm.on&&S.atm.exits.length){
       o.push(`input bool   InpATM        = true;   // scale-out (overrides single TP)`);
@@ -1833,11 +1846,40 @@ function genMQL5(){
       o.push(`   }`);
       o.push(`   return true;`);
       o.push(`}`);o.push(``);
+      // --- Funded payout pacer: consistency-safe daily banking, stop at withdrawal target ---
+      o.push(`// Funded payout pacer: bank at most Consistency% of the withdrawal target per day; stop for good at the target.`);
+      o.push(`double gFundStart=0; datetime gPayDay=0; double gDayStartEq=0; bool gPayoutDone=false;`);
+      o.push(`bool PayoutOK(){`);
+      o.push(`   if(!InpFundedMode) return true;`);
+      o.push(`   double eq=AccountInfoDouble(ACCOUNT_EQUITY);`);
+      o.push(`   if(gFundStart<=0) gFundStart=(InpInitBalance>0?InpInitBalance:AccountInfoDouble(ACCOUNT_BALANCE));`);
+      o.push(`   double totalProfit=eq-gFundStart;`);
+      o.push(`   // 1) withdrawal target reached -> flatten + stop for good (ready to pay out)`);
+      o.push(`   if(InpWithdrawTgt>0 && totalProfit>=InpWithdrawTgt){`);
+      o.push(`      if(!gPayoutDone){ Print("PAYOUT TARGET reached: +",DoubleToString(totalProfit,2)," >= ",DoubleToString(InpWithdrawTgt,2)," -> trading stopped, ready to withdraw"); gPayoutDone=true; }`);
+      o.push(`      for(int i=PositionsTotal()-1;i>=0;i--){ ulong tk=PositionGetTicket(i); if(PositionSelectByTicket(tk) && PositionGetInteger(POSITION_MAGIC)==InpMagic) trade.PositionClose(tk); }`);
+      o.push(`      return false;`);
+      o.push(`   }`);
+      o.push(`   // 2) daily consistency cap: no single day may bank more than Consistency% of the withdrawal target`);
+      o.push(`   if(InpConsistPct>0){`);
+      o.push(`      datetime d=iTime(_Symbol,PERIOD_D1,0);`);
+      o.push(`      if(d!=gPayDay){ gPayDay=d; gDayStartEq=eq; }`);
+      o.push(`      double dayProfit=eq-gDayStartEq;`);
+      o.push(`      double base=(InpWithdrawTgt>0?InpWithdrawTgt:MathMax(totalProfit,gFundStart*0.05));`);
+      o.push(`      double dayCap=(InpConsistPct/100.0)*base;`);
+      o.push(`      if(dayProfit>=dayCap){`);
+      o.push(`         for(int i=PositionsTotal()-1;i>=0;i--){ ulong tk=PositionGetTicket(i); if(PositionSelectByTicket(tk) && PositionGetInteger(POSITION_MAGIC)==InpMagic) trade.PositionClose(tk); }`);
+      o.push(`         return false;   // banked today's allowance -> resume tomorrow, stays consistency-safe`);
+      o.push(`      }`);
+      o.push(`   }`);
+      o.push(`   return true;`);
+      o.push(`}`);o.push(``);
     }
   }
   // main
   o.push(isEA?`void OnTick(){`:`int OnCalculate(const int rates_total,const int prev,const int begin,const double &price[]){`);
   if(isEA&&S.prop.on) o.push(`   if(!PropOK()) return;   // DD guard — every tick, before anything else`);
+  if(isEA&&S.prop.on) o.push(`   if(!PayoutOK()) return; // funded payout pacer — consistency-safe daily banking + stop at withdrawal target`);
   o.push(`   static datetime lastBar=0; datetime cur=iTime(_Symbol,_Period,0);`);
   o.push(`   if(cur==lastBar) return${isEA?"":"(rates_total)"}; lastBar=cur;   // one eval per closed bar`);
   o.push(``);
@@ -2330,7 +2372,7 @@ $("#loadEx").onclick=()=>{
     longRules:["hma_up","macd_up","psar_up"],shortRules:["macd_dn","hma_dn","psar_dn"],combine:"AND",
     sizeMode:"riskpct",size:1,slMode:"atr",sl:1,tp:3,trail:"off",spread:25,sess:"off",max:1,
     markov:{on:false,file:"markov_regime.txt",common:true},
-    prop:{on:false,preset:"fnstellar",init:6000,daily:5,max:10,halt:true,ddType:"static",target:10,riskPct:1,minDays:0},
+    prop:{on:false,preset:"fnstellar",init:6000,daily:5,max:10,halt:true,ddType:"static",target:10,riskPct:1,minDays:0,phase:"challenge",consist:0,withdraw:0},
     workflow:[],broker:{id:"blackbull",sym:"XAUUSD"},
     atm:{on:false,exits:[{size:50,atR:1},{size:50,atR:2}],be:true,beAfter:1},
     entry:{type:"limit",off:1.2,wait:4}};
