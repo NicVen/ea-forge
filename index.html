@@ -182,13 +182,13 @@
 
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<title>EA Forge V2.48 — AI Algorithm Builder</title>
+<title>EA Forge V2.49 — AI Algorithm Builder</title>
 <div class="wrap">
 <header>
   <div class="brand">
     <div class="mark">EA</div>
     <div>
-      <b>EA Forge <span id="appVer" class="verpill">V2.48</span></b><br><span>algorithm builder · mt5 + pine</span>
+      <b>EA Forge <span id="appVer" class="verpill">V2.49</span></b><br><span>algorithm builder · mt5 + pine</span>
     </div>
   </div>
   <div class="spacer"></div>
@@ -3347,6 +3347,27 @@ function finalizeGenome(g,cfg,regen){
 // which indicators suit each asset class → the system auto-selects the right ones per pair
 const CLASS_INDS={fx:["rsi","stoch","cci","wpr","bb","ema","macd","pivot","proc","er","keltner","qqe","wt","lrsi","dema","donchian"],metal:["ema","sma","macd","atr","adx","psar","bb","rsi","fib","hma","supertrend","keltner","stc","tema","donchian"],index:["ema","sma","macd","adx","psar","roc","atr","pivot","supertrend","ichimoku","vortex","linreg","stc","dema","donchian"],commodity:["atr","adx","ema","macd","bb","psar","rsi","fib","supertrend","keltner","gann","qqe","tema","donchian"],crypto:["ema","macd","roc","atr","adx","bb","psar","stoch","supertrend","vortex","hma","wt","stc","dema","donchian"],stock:["ema","sma","macd","adx","rsi","atr","psar","supertrend","roc","linreg","hma","donchian","bb","stc","tema"]};
 function classKeys(){const cls=(INSTR[S.sym]||{}).cls||"fx";const p=CLASS_INDS[cls];return (p&&p.every(k=>INDICATORS[k]))?p:Object.keys(INDICATORS);}
+// ===== Documented market-structure EDGE SEEDS =====
+// The search starts from these researched patterns (a thesis) instead of pure random indicator noise.
+// Each is refined by the evolver (crossover/mutate) — so we tune a real edge rather than mine dice rolls.
+const EDGE_TEMPLATES=[
+  {name:"Trend pullback (EMA+RSI)",     inds:[{key:"ema",params:{period:50}},{key:"rsi",params:{period:14}}],            longRules:["ema_cross_up","rsi_os"], shortRules:["ema_cross_dn","rsi_ob"], combine:"AND", sl:1.5, tp:2},
+  {name:"SuperTrend follow (ST+ADX)",   inds:[{key:"supertrend",params:{period:10}},{key:"adx",params:{period:14}}],     longRules:["st_up","adx_trend"],     shortRules:["st_dn","adx_trend"],    combine:"AND", sl:2,   tp:2.5},
+  {name:"Donchian breakout (Don+ADX)",  inds:[{key:"donchian",params:{period:20}},{key:"adx",params:{period:14}}],       longRules:["donch_up","adx_trend"],  shortRules:["donch_dn","adx_trend"], combine:"AND", sl:2,   tp:3},
+  {name:"Bollinger fade (BB+RSI)",      inds:[{key:"bb",params:{period:20}},{key:"rsi",params:{period:14}}],             longRules:["bb_lo","rsi_os"],        shortRules:["bb_hi","rsi_ob"],       combine:"AND", sl:1.5, tp:1.5},
+  {name:"EMA+MACD trend",               inds:[{key:"ema",params:{period:50}},{key:"macd",params:{}}],                    longRules:["ema_cross_up","macd_up"],shortRules:["ema_cross_dn","macd_dn"],combine:"AND", sl:1.5, tp:2},
+  {name:"Keltner+Stoch reversion",      inds:[{key:"keltner",params:{period:20}},{key:"stoch",params:{}}],               longRules:["kelt_lo","stoch_os"],    shortRules:["kelt_hi","stoch_ob"],   combine:"AND", sl:1.5, tp:1.8},
+];
+function seedEdgeTemplates(cfg){
+  const out=[];
+  for(const t of EDGE_TEMPLATES){
+    if(!t.inds.every(i=>INDICATORS[i.key]))continue;   // skip if an indicator isn't available
+    const inds=t.inds.map(i=>({key:i.key,params:{...((INDICATORS[i.key]&&INDICATORS[i.key].params)||{}),...i.params}}));
+    let g=null;try{g=finalizeGenome({inds,longRules:[...t.longRules],shortRules:[...t.shortRules],combine:t.combine,slMode:cfg.slMode,sl:t.sl,tp:t.tp},cfg,false);}catch(e){}
+    if(g){g.entry={type:"market",off:0.5,wait:5};g._seed=t.name;out.push(g);}
+  }
+  return out;
+}
 function randGenome(cfg){
   const keys=classKeys();const n=randInt(1,cfg.maxCond);
   const chosen=shuffle(keys.slice()).slice(0,n);
@@ -3579,7 +3600,9 @@ async function evolve(){
   if(all.length<300){toast("Need ≥300 bars (Backtest Lab data)");return;}
   autoSpread(all);BT.spreadPts=parseFloat($("#btSpread").value)||0;BT.slipPts=parseFloat($("#btSlip").value)||0;
   const split=Math.floor(all.length*cfg.split/100);EV.IS=all.slice(0,split);EV.OOS=all.slice(split);
-  let pop=[],tries=0;while(pop.length<cfg.pop&&tries++<cfg.pop*40){const g=randGenome(cfg);if(g)pop.push(g);}
+  let pop=[],tries=0;
+  try{ pop.push(...seedEdgeTemplates(cfg)); }catch(e){}   // SEED: start from documented edges (thesis), not pure noise
+  while(pop.length<cfg.pop&&tries++<cfg.pop*40){const g=randGenome(cfg);if(g)pop.push(g);}
   if(pop.length<5){toast("Couldn't seed population — widen ranges");return;}
   EV.generated=0;EV.accepted=0;EV.bankMap={};EV.bank=[];EV.fitHist=[];EV.gen=0;EV.running=true;EV.paused=false;
   $("#evData").textContent=`data: ${all.length} bars · IS ${EV.IS.length} / OOS ${EV.OOS.length}`;
@@ -3748,7 +3771,7 @@ $("#fnAutoTune").onclick=()=>{
 // island-model GA: nIslands parallel pops that migrate their best (ring) → more diversity, less premature convergence
 function gaQuiet(IS,cfg,pop,gens){
   const nIsl=Math.max(1,cfg.islands||1),per=Math.max(6,Math.floor(pop/nIsl)),migrate=Math.max(3,Math.floor(gens/4));
-  let isles=[];for(let k=0;k<nIsl;k++){let P=[],t=0;while(P.length<per&&t++<per*40){const g=randGenome(cfg);if(g)P.push(g);}isles.push(P);}
+  let isles=[];for(let k=0;k<nIsl;k++){let P=[],t=0;if(k===0){try{P.push(...seedEdgeTemplates(cfg));}catch(e){}}while(P.length<per&&t++<per*40){const g=randGenome(cfg);if(g)P.push(g);}isles.push(P);}
   if(isles.every(P=>P.length<3))return null;
   const ev=P=>{P.forEach(g=>{if(g._fit===undefined){const m=metrics(simulate(IS,g));g._m=m;g._fit=fitness(m,cfg);}});P.sort((a,b)=>b._fit-a._fit);};
   for(let gen=0;gen<gens;gen++){
@@ -4143,7 +4166,7 @@ async function autoEvolve(){
   // staged evolution with live progress
   const nIsl=cfg.islands||1,per=Math.max(8,Math.floor(cfg.pop/nIsl)),migrate=Math.max(3,Math.floor(cfg.gens/4));
   log(`▶ Evolving ${nIsl} islands × ${per} = ${nIsl*per} strategies/generation (migrating best every ${migrate})…`);
-  let isles=[];for(let k=0;k<nIsl;k++){let P=[],t=0;while(P.length<per&&t++<per*40){const g=randGenome(cfg);if(g)P.push(g);}isles.push(P);}
+  let isles=[];for(let k=0;k<nIsl;k++){let P=[],t=0;if(k===0){try{P.push(...seedEdgeTemplates(cfg));}catch(e){}}while(P.length<per&&t++<per*40){const g=randGenome(cfg);if(g)P.push(g);}isles.push(P);}
   const evI=P=>{P.forEach(g=>{if(g._fit===undefined){g._m=metrics(simulate(IS,g));g._fit=fitness(g._m,cfg);}});P.sort((a,b)=>b._fit-a._fit);};
   for(let gen=0;gen<cfg.gens;gen++){
     isles.forEach(evI);
