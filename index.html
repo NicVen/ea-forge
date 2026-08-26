@@ -182,13 +182,13 @@
 
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<title>EA Forge V2.47 — AI Algorithm Builder</title>
+<title>EA Forge V2.48 — AI Algorithm Builder</title>
 <div class="wrap">
 <header>
   <div class="brand">
     <div class="mark">EA</div>
     <div>
-      <b>EA Forge <span id="appVer" class="verpill">V2.47</span></b><br><span>algorithm builder · mt5 + pine</span>
+      <b>EA Forge <span id="appVer" class="verpill">V2.48</span></b><br><span>algorithm builder · mt5 + pine</span>
     </div>
   </div>
   <div class="spacer"></div>
@@ -1750,6 +1750,13 @@ function genMQL5(){
       o.push(`input bool   InpATM_BE     = ${S.atm.be?"true":"false"};`);
       S.atm.exits.forEach((e,k)=>o.push(`input double InpATM_Size${k+1}  = ${e.size}; input double InpATM_R${k+1} = ${e.atR};`));
     }
+    // --- Scalp manager: $-target, ride-the-trend, prop min-hold ---
+    o.push(`input bool   InpScalpMgr   = ${(S.style==="scalp"||S.tf==="M1"||S.tf==="M5")?"true":"false"};  // $-target + ride-the-trend + min-hold manager`);
+    o.push(`input double InpDollarTP   = 20;    // take profit (or start riding) when a position gains this many $ (0=off)`);
+    o.push(`input bool   InpRideMode   = true;  // after $target: move to breakeven+ and TRAIL to ride the trend instead of closing flat`);
+    o.push(`input int    InpTrailPts   = 150;   // trail-stop distance (points) while riding`);
+    o.push(`input int    InpMinHoldSec = 120;   // NEVER close a trade before this many seconds (prop min-hold rule — earlier = violation)`);
+    o.push(`input bool   InpReentry    = true;  // allow immediate re-entry while the trend is still strong`);
   }
   S.inds.forEach(i=>Object.entries(i.params).forEach(([p,v])=>{const dv=(v==null||(typeof v==="number"&&isNaN(v)))?((INDICATORS[i.key]&&INDICATORS[i.key].params&&INDICATORS[i.key].params[p])!=null?INDICATORS[i.key].params[p]:0):v;o.push(`input double In_${i.key}_${p} = ${dv};`);}));
   o.push(``);
@@ -1879,11 +1886,36 @@ function genMQL5(){
       o.push(`   return true;`);
       o.push(`}`);o.push(``);
     }
+    // --- Scalp manager: $-target take / ride-the-trend + prop MIN-HOLD (never close before InpMinHoldSec) ---
+    o.push(`datetime gLastClose=0;`);
+    o.push(`void ManageScalp(){`);
+    o.push(`   if(!InpScalpMgr) return;`);
+    o.push(`   for(int i=PositionsTotal()-1;i>=0;i--){`);
+    o.push(`      ulong tk=PositionGetTicket(i); if(!PositionSelectByTicket(tk)) continue;`);
+    o.push(`      if(PositionGetInteger(POSITION_MAGIC)!=InpMagic) continue;`);
+    o.push(`      long secsHeld=(long)(TimeCurrent()-(datetime)PositionGetInteger(POSITION_TIME));`);
+    o.push(`      bool held = secsHeld>=InpMinHoldSec;   // prop min-hold rule: no EA-initiated close before this`);
+    o.push(`      double profit=PositionGetDouble(POSITION_PROFIT);   // $ incl. swap/commission`);
+    o.push(`      long ptype=PositionGetInteger(POSITION_TYPE);`);
+    o.push(`      double entry=PositionGetDouble(POSITION_PRICE_OPEN), curSL=PositionGetDouble(POSITION_SL), curTP=PositionGetDouble(POSITION_TP);`);
+    o.push(`      double px=(ptype==POSITION_TYPE_BUY)?SymbolInfoDouble(_Symbol,SYMBOL_BID):SymbolInfoDouble(_Symbol,SYMBOL_ASK);`);
+    o.push(`      if(InpDollarTP>0 && profit>=InpDollarTP){`);
+    o.push(`         if(!InpRideMode){`);
+    o.push(`            if(held){ trade.PositionClose(tk); gLastClose=TimeCurrent(); }   // bank the $, min-hold respected`);
+    o.push(`         } else if(held){   // RIDE: lock >= breakeven then trail InpTrailPts behind price, let the trend run`);
+    o.push(`            double newSL;`);
+    o.push(`            if(ptype==POSITION_TYPE_BUY){ newSL=px-InpTrailPts*_Point; if(newSL<entry) newSL=entry; if(curSL==0 || newSL>curSL) trade.PositionModify(tk,NormalizeDouble(newSL,_Digits),curTP); }`);
+    o.push(`            else{ newSL=px+InpTrailPts*_Point; if(newSL>entry) newSL=entry; if(curSL==0 || newSL<curSL) trade.PositionModify(tk,NormalizeDouble(newSL,_Digits),curTP); }`);
+    o.push(`         }`);
+    o.push(`      }`);
+    o.push(`   }`);
+    o.push(`}`);o.push(``);
   }
   // main
   o.push(isEA?`void OnTick(){`:`int OnCalculate(const int rates_total,const int prev,const int begin,const double &price[]){`);
   if(isEA&&S.prop.on) o.push(`   if(!PropOK()) return;   // DD guard — every tick, before anything else`);
   if(isEA&&S.prop.on) o.push(`   if(!PayoutOK()) return; // funded payout pacer — consistency-safe daily banking + stop at withdrawal target`);
+  if(isEA) o.push(`   ManageScalp();   // $-target take / ride-the-trend + prop min-hold — runs every tick`);
   o.push(`   static datetime lastBar=0; datetime cur=iTime(_Symbol,_Period,0);`);
   o.push(`   if(cur==lastBar) return${isEA?"":"(rates_total)"}; lastBar=cur;   // one eval per closed bar`);
   o.push(``);
@@ -1966,6 +1998,8 @@ function genMQL5(){
      o.push(`      ulong _tk=PositionGetTicket(_i); if(!PositionSelectByTicket(_tk)) continue;`);
      o.push(`      if(PositionGetString(POSITION_SYMBOL)!=_Symbol || PositionGetInteger(POSITION_MAGIC)!=InpMagic) continue;`);
      o.push(`      long _typ=PositionGetInteger(POSITION_TYPE);`);
+     o.push(`      bool _held=(TimeCurrent()-(datetime)PositionGetInteger(POSITION_TIME))>=InpMinHoldSec;`);
+     o.push(`      if(InpScalpMgr && !_held) continue;   // MIN-HOLD: never close a trade before InpMinHoldSec (prop violation guard)`);
      o.push(`      bool _tExit=${S.exits.bars>0?"(iBarShift(_Symbol,_Period,(datetime)PositionGetInteger(POSITION_TIME))>=InpExitBars)":"false"};`);
      o.push(`      if(_typ==POSITION_TYPE_BUY  && (_tExit || ${S.exits.opposite?"shortSig || ":""}exitLongSig))  { trade.PositionClose(_tk); continue; }`);
      o.push(`      if(_typ==POSITION_TYPE_SELL && (_tExit || ${S.exits.opposite?"longSig || ":""}exitShortSig)) { trade.PositionClose(_tk); continue; }`);
@@ -1986,16 +2020,18 @@ function genMQL5(){
   o.push(`   if(slPts<minPts) slPts=minPts;   // respect broker minimum stop distance — prop servers enforce it (demo often 0), else OrderSend fails "invalid stops"`);
   o.push(`   if(tpPts>0.0 && tpPts<minPts) tpPts=minPts;`);
   o.push(``);
+  o.push(`   if(!InpReentry && gLastClose>0 && (TimeCurrent()-gLastClose)<InpMinHoldSec){ longSig=false; shortSig=false; }   // re-entry off: pause after a close`);
+  o.push(``);
   const atmOn=S.atm.on&&S.atm.exits.length;
   const eT=(S.entry&&S.entry.type)||"market";
   const NZ=x=>`NormalizeDouble(${x},_Digits)`;   // normalize every price to the symbol's digits — some servers reject un-rounded prices
   if(eT==="market"){
     const tpLong=atmOn?"0":NZ("ask+tpPts*_Point"), tpShort=atmOn?"0":NZ("bid-tpPts*_Point");
     o.push(`   if(longSig){`);
-    o.push(`      double sl=${NZ("ask-slPts*_Point")}, tp=${tpLong};`);
+    o.push(`      double sl=${NZ("ask-slPts*_Point")}, tp=(InpScalpMgr?0.0:${tpLong});   // scalp: no fixed TP — $-manager/ride handles exits (avoids a sub-min-hold TP close)`);
     o.push(`      trade.Buy(LotFor(slPts),_Symbol,ask,sl,tp,"${S.name}");`);
     o.push(`   } else if(shortSig){`);
-    o.push(`      double sl=${NZ("bid+slPts*_Point")}, tp=${tpShort};`);
+    o.push(`      double sl=${NZ("bid+slPts*_Point")}, tp=(InpScalpMgr?0.0:${tpShort});`);
     o.push(`      trade.Sell(LotFor(slPts),_Symbol,bid,sl,tp,"${S.name}");`);
     o.push(`   }`);
   }else{
