@@ -182,13 +182,13 @@
 
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<title>EA Forge V2.46 — AI Algorithm Builder</title>
+<title>EA Forge V2.47 — AI Algorithm Builder</title>
 <div class="wrap">
 <header>
   <div class="brand">
     <div class="mark">EA</div>
     <div>
-      <b>EA Forge <span id="appVer" class="verpill">V2.46</span></b><br><span>algorithm builder · mt5 + pine</span>
+      <b>EA Forge <span id="appVer" class="verpill">V2.47</span></b><br><span>algorithm builder · mt5 + pine</span>
     </div>
   </div>
   <div class="spacer"></div>
@@ -4551,12 +4551,12 @@ $("#scanPairs").onclick=scanPairs;
 const CS_GOALS={balanced:{profit:1,rel:1,dd:1,fit:1},profit:{profit:3,rel:.5,dd:.5,fit:1},reliability:{profit:.5,rel:3,dd:1,fit:1},lowdd:{profit:.5,rel:1,dd:3,fit:.5}};
 /* ONE unified databank — Continuous Search, Library, Auto-evolve & Scan all feed it */
 const DB={rows:[],seen:{},tested:0,goal:"balanced",rej:{pf:0,n:0,exp:0,dd:0,sym:0,dup:0}};
-function dbResetRej(){DB.rej={pf:0,n:0,exp:0,dd:0,sym:0,dup:0};}
+function dbResetRej(){DB.rej={pf:0,n:0,exp:0,dd:0,sym:0,dsr:0,wf:0,dup:0};}
 function dbThresholds(){
   const num=(id,d)=>{const el=document.querySelector(id);const v=el?parseFloat(el.value):NaN;return isNaN(v)?d:v;};
   return{minPF:num("#csPF",1.1),minT:Math.round(num("#csMinT",15)),maxDD:num("#csMaxDD",1e9),keep:Math.max(10,Math.round(num("#csKeep",50)))};
 }
-function dbRejSummary(){const r=DB.rej,p=[];if(r.pf)p.push(r.pf+" PF&lt;min");if(r.exp)p.push(r.exp+" expectancy≤0 (costs eat edge)");if(r.n)p.push(r.n+" too few trades");if(r.dd)p.push(r.dd+" DD&gt;max");if(r.sym)p.push(r.sym+" one-sided");if(r.dup)p.push(r.dup+" duplicate");return p.length?p.join(" · "):"none yet";}
+function dbRejSummary(){const r=DB.rej,p=[];if(r.pf)p.push(r.pf+" PF&lt;min");if(r.exp)p.push(r.exp+" expectancy≤0 (costs eat edge)");if(r.n)p.push(r.n+" too few trades");if(r.dd)p.push(r.dd+" DD&gt;max");if(r.sym)p.push(r.sym+" one-sided");if(r.dsr)p.push(r.dsr+" fails Deflated-Sharpe (likely curve-fit)");if(r.wf)p.push(r.wf+" fails walk-forward (only worked half the time)");if(r.dup)p.push(r.dup+" duplicate");return p.length?p.join(" · "):"none yet";}
 function dbScore(r,w){return csScore(r.oos,r.stab,r.dsr,w)*(0.5+0.5*Math.max(0,r.sym))*(r.dsr<0.3?0.55:1);}   // penalize one-sided + overfit
 function dbAdd(g,oos,oosBars,src,tf){
   const T=dbThresholds();
@@ -4569,6 +4569,14 @@ function dbAdd(g,oos,oosBars,src,tf){
   const tr=simDetailed(oosBars,g);const sym=symmetryOf(tr);
   if(sym<0.12){DB.rej.sym++;return false;}             // reject one-directional strategies
   const dsr=deflatedSharpe(tr.map(t=>t.r),effTrials(DB.tested),0).dsr;
+  // HARD HONESTY GATE (V2.47): a kept strategy must clear real statistical bars, not just in-sample-positive.
+  // 1) Deflated Sharpe floor — after accounting for how many were tested, is the edge likely REAL?
+  const minDSR=(function(){const el=document.querySelector("#csDSR");const v=el?parseFloat(el.value):NaN;return isNaN(v)?0.10:Math.max(0,v);})();
+  if(dsr<minDSR){DB.rej.dsr=(DB.rej.dsr||0)+1;return false;}
+  // 2) Split-half walk-forward — must be profitable in BOTH halves of the OOS window, not one lucky stretch.
+  if(oosBars&&oosBars.length>=60){const h=Math.floor(oosBars.length/2);
+    let a,b;try{a=metrics(simulate(oosBars.slice(0,h),g));b=metrics(simulate(oosBars.slice(h),g));}catch(e){a=b=null;}
+    if(!(a&&b&&a.n>=3&&b.n>=3&&a.exp>0&&b.exp>0)){DB.rej.wf=(DB.rej.wf||0)+1;return false;}}
   DB.seen[key]=1;DB.rows.push({g:cloneG(g),oos,stab:oos.stability||0,sym,dsr,src:src||"?",tf:tf||S.tf,score:0});
   const w=CS_GOALS[DB.goal]||CS_GOALS.balanced;
   DB.rows.forEach(r=>r.score=dbScore(r,w));DB.rows.sort((a,b)=>b.score-a.score);if(DB.rows.length>T.keep)DB.rows.length=T.keep;
