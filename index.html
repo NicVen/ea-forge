@@ -182,13 +182,13 @@
 
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<title>EA Forge V2.45 — AI Algorithm Builder</title>
+<title>EA Forge V2.46 — AI Algorithm Builder</title>
 <div class="wrap">
 <header>
   <div class="brand">
     <div class="mark">EA</div>
     <div>
-      <b>EA Forge <span id="appVer" class="verpill">V2.45</span></b><br><span>algorithm builder · mt5 + pine</span>
+      <b>EA Forge <span id="appVer" class="verpill">V2.46</span></b><br><span>algorithm builder · mt5 + pine</span>
     </div>
   </div>
   <div class="spacer"></div>
@@ -2599,7 +2599,10 @@ function simulate(bars,strat){
       const px=o.c[i];const dist=strat.slMode==="atr"?((o.atr?o.atr[i]:NA)*strat.sl):(strat.sl*guessPoint(px));
       if(!dist||isNaN(dist)||dist<=0)continue;
       const side=L?1:-1;
-      if(et.type==="market"){pos=mkPos(side,px,dist,atm,tpR);pos.entryBar=i;}
+      // REALISTIC FILL: a signal confirmed at bar i's CLOSE can only be filled at the NEXT bar's OPEN
+      // (same as TradingView/MT5 live). Filling at the signal close is look-ahead optimism that makes
+      // in-app edges vanish on TradingView. Enter at open[i+1]; SL/TP may be hit within that same bar.
+      if(et.type==="market"){const fillPx=(bars[i+1]&&bars[i+1].o!=null)?bars[i+1].o:px;pos=mkPos(side,fillPx,dist,atm,tpR);pos.entryBar=i+1;}
       else{const atr=(o.atr?o.atr[i]:dist)||dist;const off=(et.off||0.5)*atr;const epx=et.type==="stop"?(side===1?px+off:px-off):(side===1?px-off:px+off);pend={side,px:epx,type:et.type,dist,expire:i+(et.wait||5)};}
     }
   }
