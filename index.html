@@ -182,13 +182,13 @@
 
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<title>EA Forge V2.51 — AI Algorithm Builder</title>
+<title>EA Forge V2.52 — AI Algorithm Builder</title>
 <div class="wrap">
 <header>
   <div class="brand">
     <div class="mark">EA</div>
     <div>
-      <b>EA Forge <span id="appVer" class="verpill">V2.51</span></b><br><span>algorithm builder · mt5 + pine</span>
+      <b>EA Forge <span id="appVer" class="verpill">V2.52</span></b><br><span>algorithm builder · mt5 + pine</span>
     </div>
   </div>
   <div class="spacer"></div>
@@ -2417,7 +2417,11 @@ $("#loadEx").onclick=()=>{
     workflow:[],broker:{id:"blackbull",sym:"XAUUSD"},
     atm:{on:false,exits:[{size:50,atR:1},{size:50,atR:2}],be:true,beAfter:1},
     entry:{type:"market",off:0.5,wait:5}};
-  sync();analyze();toast("⭐ Loaded the PROVEN gold edge — 12y walk-forward validated");
+  sync();analyze();
+  try{buildCode();}catch(e){}                    // generate the EA code immediately
+  try{setMode("expert");}catch(e){}              // reveal the code card (hidden in Advanced) + manual toolkit
+  setTimeout(()=>{const cc=document.getElementById("codeCard");if(cc)cc.scrollIntoView({behavior:"smooth",block:"start"});},150);
+  toast("⭐ Proven gold edge loaded — the EA code is ready below, press Download code ▾");
 };
 
 /* ================= BACKTEST LAB ================= */
