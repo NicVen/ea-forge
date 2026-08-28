@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-store">
-<title>EA Forge V3.04 — AI Algorithm Builder</title>
+<title>EA Forge V3.05 — AI Algorithm Builder</title>
 </head>
 <body>
 <style>
@@ -216,13 +216,13 @@
 
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<title>EA Forge V3.04 — AI Algorithm Builder</title>
+<title>EA Forge V3.05 — AI Algorithm Builder</title>
 <div class="wrap">
 <header>
   <div class="brand">
     <div class="mark">EA</div>
     <div>
-      <b>EA Forge <span id="appVer" class="verpill">V3.04</span></b><br><span>algorithm builder · mt5 + pine</span>
+      <b>EA Forge <span id="appVer" class="verpill">V3.05</span></b><br><span>algorithm builder · mt5 + pine</span>
     </div>
   </div>
   <div class="spacer"></div>
@@ -1138,7 +1138,7 @@
 
 <script>
 "use strict";
-const APP_VERSION="V3.04";   // single source of truth — bump on every change (small: +0.01 · major: next integer .00). Mirror in package.json.
+const APP_VERSION="V3.05";   // single source of truth — bump on every change (small: +0.01 · major: next integer .00). Mirror in package.json.
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 try{const _v=document.querySelector("#appVer");if(_v)_v.textContent=APP_VERSION;document.title="EA Forge "+APP_VERSION+" — AI Algorithm Builder";}catch(e){}
 const toast=(m)=>{const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),1800);};
@@ -4781,8 +4781,8 @@ function netWhy(err){
   if(hasNet())return "The pull reached the network but failed: "+(err||"unknown")+". Check AVG Web Shield HTTPS scanning, then retry.";
   const inFrame=(function(){try{return window.self!==window.top;}catch(e){return true;}})();
   return inFrame
-    ? "<b>This page cannot reach the internet.</b> Running inside claude.ai, the sandbox blocks every outside request — no setting fixes it. Use the <b>desktop app (V3.04 or newer)</b>, which pulls through Node with no CORS limit, or load data with <b>Upload CSV</b> / <b>Import a folder of CSVs</b> below."
-    : "<b>No data bridge in this build.</b> A plain browser can only reach Yahoo through a CORS proxy, and as of Aug 2026 the free ones are all dead or paid. The <b>desktop app V3.04+</b> fetches through Node instead — if you are already in the desktop app, you are on an older build that shipped without the bridge, so re-run the installer. Otherwise use <b>Upload CSV</b> / <b>Import a folder of CSVs</b>.";
+    ? "<b>This page cannot reach the internet.</b> Running inside claude.ai, the sandbox blocks every outside request — no setting fixes it. Use the <b>desktop app (V3.05 or newer)</b>, which pulls through Node with no CORS limit, or load data with <b>Upload CSV</b> / <b>Import a folder of CSVs</b> below."
+    : "<b>No data bridge in this build.</b> A plain browser can only reach Yahoo through a CORS proxy, and as of Aug 2026 the free ones are all dead or paid. The <b>desktop app V3.05+</b> fetches through Node instead — if you are already in the desktop app, you are on an older build that shipped without the bridge, so re-run the installer. Otherwise use <b>Upload CSV</b> / <b>Import a folder of CSVs</b>.";
 }
 // GET raw text: DESKTOP app → Node main process (no CORS, reliable); BROWSER → proxy fallbacks.
 async function httpGet(url){
@@ -5010,7 +5010,7 @@ async function dukaRun(opts){
     if(rec&&rec.bars&&rec.bars.length){bars=rec.bars;cur=new Date(saved.next);say({resumed:bars.length,from:saved.next});}
   }
   const totalDays=Math.round((today-cur)/86400000);
-  let done=0,got=0,miss=0,fail=0,streak=0,cooled=false;const t0=Date.now();
+  let done=0,got=0,miss=0,fail=0,junk=0,streak=0,cooled=false,lastClose=0;const t0=Date.now();
   DUKA.gap=1200;DUKA.ok=0;
   DUKA.running=true;DUKA.stop=false;
 
@@ -5041,8 +5041,18 @@ async function dukaRun(opts){
               const u=await dukaDecode(raw);
               const day=dukaParseDay(u,Date.UTC(cur.getUTCFullYear(),cur.getUTCMonth(),cur.getUTCDate()),scale);
               if(day.length){
-                bars=bars.concat(factor>1?resample(day,factor):day);   // 1440 divides by 5/15/30/60
-                got++;
+                let mn=Infinity,mx=-Infinity;
+                for(const b of day){if(b.c<mn)mn=b.c;if(b.c>mx)mx=b.c;}
+                const flat=(mx-mn)<=Math.abs(mn)*1e-6;                  // a whole day at one price = filler file
+                const jump=lastClose>0?Math.max(day[0].o/lastClose,lastClose/day[0].o):1;
+                if(flat||jump>5){
+                  junk++;
+                  if(junk===1)say({junkFirst:cur.toISOString().slice(0,10),junkPrice:day[0].o,flat});
+                }else{
+                  bars=bars.concat(factor>1?resample(day,factor):day);  // 1440 divides by 5/15/30/60
+                  lastClose=day[day.length-1].c;
+                  got++;
+                }
               } else miss++;
             } else miss++;
           }catch(e){fail++;}
@@ -5053,7 +5063,7 @@ async function dukaRun(opts){
     done++;
     if(done%10===0||cur>=today){
       const el=(Date.now()-t0)/1000;
-      say({done,totalDays,bars:bars.length,got,miss,fail,elapsed:el,
+      say({done,totalDays,bars:bars.length,got,miss,fail,junk,elapsed:el,
         eta:done?el/done*(totalDays-done):0,date:cur.toISOString().slice(0,10)});
       const next=new Date(cur);next.setUTCDate(next.getUTCDate()+1);
       try{
@@ -5071,7 +5081,7 @@ async function dukaRun(opts){
       ...(typeof vIntegrity==="function"?vIntegrity(bars,factor):{})});}catch(e){}
     if(!DUKA.stop)localStorage.removeItem(dukaKey(sym,tf));        // finished cleanly
   }
-  return{bars:bars.length,got,miss,fail,stopped:DUKA.stop,scale};
+  return{bars:bars.length,got,miss,fail,junk,stopped:DUKA.stop,scale};
 }
 
 // ===================== DATA VAULT =====================
@@ -5810,12 +5820,14 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
               if(p.resumed){dOut.innerHTML='<span class="hint">resuming from '+String(p.from).slice(0,10)+' with '+p.resumed.toLocaleString()+' bars already saved…</span>';return;}
               if(p.throttled){dOut.innerHTML='<div class="hint" style="color:var(--warn)">Dukascopy pushed back (HTTP '+p.throttled+') — waiting '+Math.round(p.waitMs/1000)+'s and slowing to '+(p.gap/1000).toFixed(1)+'s between requests. This is normal; the pull carries on.</div>';return;}
               if(p.cooling){dOut.innerHTML='<div class="hint" style="color:var(--warn)">Rate-limited. Sitting out '+p.cooling+'s before trying again — progress is saved, nothing is lost.</div>';return;}
+              if(p.junkFirst){dOut.innerHTML='<div class="hint" style="color:var(--warn)">Skipping filler days — Dukascopy serves a flat placeholder file (every minute priced '+p.junkPrice+') for the years before this instrument\'s real history begins, starting '+p.junkFirst+'. Those are dropped, not imported.</div>';return;}
               if(p.calibrating){dOut.innerHTML='<span class="hint">checking the price scale against '+p.calibrating+'…</span>';return;}
               if(p.scale){dOut.innerHTML='<span class="hint">price scale matched (÷'+p.scale.toLocaleString()+') — downloading…</span>';return;}
               const pct=p.totalDays?Math.round(p.done/p.totalDays*100):0;
               dOut.innerHTML='<div class="hint">'+p.date+' · <b>'+pct+'%</b> ('+p.done.toLocaleString()+'/'+p.totalDays.toLocaleString()+' days) · '+
                 p.bars.toLocaleString()+' bars · '+Math.round(p.elapsed/60)+'m elapsed, ~'+Math.round(p.eta/60)+'m left'+
-                (p.miss?' · '+p.miss+' empty days':'')+(p.fail?' · <span style="color:var(--warn)">'+p.fail+' failed</span>':'')+'</div>'+
+                (p.miss?' · '+p.miss+' empty days':'')+(p.junk?' · '+p.junk+' filler days skipped':'')+
+                (p.fail?' · <span style="color:var(--warn)">'+p.fail+' failed</span>':'')+'</div>'+
                 '<div style="height:5px;border-radius:3px;background:var(--panel2);overflow:hidden;margin-top:4px"><div style="height:100%;width:'+pct+'%;background:var(--grad,var(--buy))"></div></div>';
             }});
           const b=BAKED[D.sym]||[];
@@ -5825,6 +5837,7 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
             (r.stopped?"Stopped — progress saved":"✓ Done")+'</b><br>'+
             r.bars.toLocaleString()+' '+dTf.value+' bars from '+r.got.toLocaleString()+' trading days'+
             (r.miss?' ('+r.miss+' days the feed had nothing for)':'')+
+            (r.junk?'<br><span style="color:var(--warn)">'+r.junk.toLocaleString()+' filler days dropped</span> — Dukascopy pads the years before an instrument\'s history starts with a flat placeholder price. Real history for this symbol begins where those stop.':'')+
             (r.fail?' · <span style="color:var(--warn)">'+r.fail+' failed downloads</span>':'')+
             (b.length?'<br>'+D.sym+' now holds <b>'+b.length.toLocaleString()+'</b> bars, '+
               new Date(b[0].t).toISOString().slice(0,10)+' → '+new Date(b[b.length-1].t).toISOString().slice(0,10):'')+
@@ -5836,7 +5849,8 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
       };
       dukaWrap.append($$("div",{className:"gw-note",innerHTML:
         "<b>Deep minute history — the real fix for thin data.</b> Yahoo caps hourly at two years and has no minute data at all, which is why searches keep landing on a few months of bars. "+
-        "Dukascopy serves free minute candles back ~20 years. It is slow by design: one request per day with a pause, because they block bursts and will refuse your IP for a while if you push. "+
+        "Dukascopy serves free minute candles back ~20 years — <b>gold and EURUSD minute data is real from 2004</b> (checked by decoding it; 2003 and earlier is a flat placeholder file and gets dropped automatically). "+
+        "It is slow by design: one request per day with a pause, because they block bursts and will refuse your IP for a while if you push. "+
         "Stop whenever you like — it saves after every day and resumes. <b>Reliable for forex and metals</b>; other instruments may not exist under the same name, and you'll be told rather than handed wrong data."}),
         dYears,dTf,dGo,est,dOut);
     } else {
