@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-store">
-<title>EA Forge V3.00 — AI Algorithm Builder</title>
+<title>EA Forge V3.01 — AI Algorithm Builder</title>
 </head>
 <body>
 <style>
@@ -216,13 +216,13 @@
 
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<title>EA Forge V3.00 — AI Algorithm Builder</title>
+<title>EA Forge V3.01 — AI Algorithm Builder</title>
 <div class="wrap">
 <header>
   <div class="brand">
     <div class="mark">EA</div>
     <div>
-      <b>EA Forge <span id="appVer" class="verpill">V3.00</span></b><br><span>algorithm builder · mt5 + pine</span>
+      <b>EA Forge <span id="appVer" class="verpill">V3.01</span></b><br><span>algorithm builder · mt5 + pine</span>
     </div>
   </div>
   <div class="spacer"></div>
@@ -1138,7 +1138,7 @@
 
 <script>
 "use strict";
-const APP_VERSION="V3.00";   // single source of truth — bump on every change (small: +0.01 · major: next integer .00). Mirror in package.json.
+const APP_VERSION="V3.01";   // single source of truth — bump on every change (small: +0.01 · major: next integer .00). Mirror in package.json.
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 try{const _v=document.querySelector("#appVer");if(_v)_v.textContent=APP_VERSION;document.title="EA Forge "+APP_VERSION+" — AI Algorithm Builder";}catch(e){}
 const toast=(m)=>{const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),1800);};
@@ -4703,7 +4703,19 @@ const YMAP={XAUUSD:"GC=F",XAGUSD:"SI=F",XPTUSD:"PL=F",XPDUSD:"PA=F",WTIUSD:"CL=F
 // Yahoo symbol: explicit per-instrument override (INSTR[k].y) wins, then YMAP, then FX fallback NAME=X.
 // Stocks carry .y = plain ticker (AAPL), so equities resolve correctly instead of becoming AAPL=X.
 const ySym=k=>((typeof INSTR==="object"&&INSTR[k]&&INSTR[k].y)?INSTR[k].y:(YMAP[k]||(k+"=X")));
+// Checked 2026-08-28 from this machine: allorigins + codetabs time out, corsproxy.io now returns 401
+// (went paid). Kept in case one comes back, but the browser path should be assumed dead - the desktop
+// app pulls through the Node main process and has no CORS problem at all.
 const PROXY_FALLBACKS=["https://corsproxy.io/?url={url}","https://api.codetabs.com/v1/proxy/?quest={url}","https://api.allorigins.win/raw?url={url}",""];
+const hasNet=()=>!!(window.eaforge&&window.eaforge.fetchUrl);
+// One honest explanation, reused everywhere a pull can fail.
+function netWhy(err){
+  if(hasNet())return "The pull reached the network but failed: "+(err||"unknown")+". Check AVG Web Shield HTTPS scanning, then retry.";
+  const inFrame=(function(){try{return window.self!==window.top;}catch(e){return true;}})();
+  return inFrame
+    ? "<b>This page cannot reach the internet.</b> Running inside claude.ai, the sandbox blocks every outside request — no setting fixes it. Use the <b>desktop app (V3.01 or newer)</b>, which pulls through Node with no CORS limit, or load data with <b>Upload CSV</b> / <b>Import a folder of CSVs</b> below."
+    : "<b>No data bridge in this build.</b> A plain browser can only reach Yahoo through a CORS proxy, and as of Aug 2026 the free ones are all dead or paid. The <b>desktop app V3.01+</b> fetches through Node instead — if you are already in the desktop app, you are on an older build that shipped without the bridge, so re-run the installer. Otherwise use <b>Upload CSV</b> / <b>Import a folder of CSVs</b>.";
+}
 // GET raw text: DESKTOP app → Node main process (no CORS, reliable); BROWSER → proxy fallbacks.
 async function httpGet(url){
   if(window.eaforge&&window.eaforge.fetchUrl){const r=await window.eaforge.fetchUrl(url);if(r&&r.ok&&r.body)return r.body;throw new Error("fetch "+(r?r.status:"?"));}
@@ -5398,13 +5410,18 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
   RENDER[4]=()=>{const info=$$("div");info.className="gw-note";info.innerHTML="Bundled pairs already have "+(BAKED[D.sym]?BAKED[D.sym].length.toLocaleString():"0")+" bars offline. <b>Get max data</b> pulls the deepest Yahoo/Binance history for this pair (desktop = no CORS limit). More data = more trustworthy proof.";
     const pull=$$("button",{className:"go",textContent:"⬇ Get max data for "+D.sym});
     const out=$$("div");out.style.marginTop="6px";
+    if(!hasNet()){   // no point offering a button that cannot work here
+      pull.className="ghost";pull.title="Online pulls need the desktop app";
+      info.innerHTML+='<div style="margin-top:6px;color:var(--warn)">⚠ Online data pulls do not work in this build — '+
+        'use <b>Upload CSV</b> or <b>Import a folder of CSVs</b>, or run the desktop app. Bundled data still works for everything else.</div>';
+    }
     pull.onclick=async()=>{pull.disabled=true;pull.textContent="Pulling…";out.textContent="";
       try{ if(typeof fetchDeep==="function"){const tf=(D.tf==="D1")?"D1":"H1";const r=await fetchDeep(D.sym,tf);
             if(r&&r.bars&&r.bars.length){BAKED[D.sym]=r.bars;if(typeof applyPair==="function")applyPair(D.sym);
               out.innerHTML='<span style="color:var(--buy)">✓ '+r.bars.length.toLocaleString()+' bars from '+r.source+'</span>';}
-            else out.innerHTML='<span style="color:var(--warn)">no deeper data returned — bundled data will be used</span>';
-          } else out.innerHTML='<span style="color:var(--warn)">deep fetch not available here — bundled data will be used</span>';
-      }catch(e){out.innerHTML='<span style="color:var(--warn)">'+e.message+' — bundled data will be used</span>';}
+            else out.innerHTML='<div class="gw-note" style="border-left-color:var(--warn)">'+netWhy("no data returned")+'</div>';
+          } else out.innerHTML='<div class="gw-note" style="border-left-color:var(--warn)">'+netWhy("deep fetch unavailable")+'</div>';
+      }catch(e){out.innerHTML='<div class="gw-note" style="border-left-color:var(--warn)">'+netWhy(e.message)+'</div>';}
       pull.disabled=false;pull.textContent="⬇ Get max data for "+D.sym;};
     // --- upload your own CSV (e.g. M1/M5/M15 from Dukascopy/QuantDataManager) — the only way to get intraday/scalp data ---
     const file=$$("input");file.type="file";file.accept=".csv,.txt";file.style.display="none";
