@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-store">
-<title>EA Forge V3.01 — AI Algorithm Builder</title>
+<title>EA Forge V3.02 — AI Algorithm Builder</title>
 </head>
 <body>
 <style>
@@ -216,13 +216,13 @@
 
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<title>EA Forge V3.01 — AI Algorithm Builder</title>
+<title>EA Forge V3.02 — AI Algorithm Builder</title>
 <div class="wrap">
 <header>
   <div class="brand">
     <div class="mark">EA</div>
     <div>
-      <b>EA Forge <span id="appVer" class="verpill">V3.01</span></b><br><span>algorithm builder · mt5 + pine</span>
+      <b>EA Forge <span id="appVer" class="verpill">V3.02</span></b><br><span>algorithm builder · mt5 + pine</span>
     </div>
   </div>
   <div class="spacer"></div>
@@ -1138,7 +1138,7 @@
 
 <script>
 "use strict";
-const APP_VERSION="V3.01";   // single source of truth — bump on every change (small: +0.01 · major: next integer .00). Mirror in package.json.
+const APP_VERSION="V3.02";   // single source of truth — bump on every change (small: +0.01 · major: next integer .00). Mirror in package.json.
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 try{const _v=document.querySelector("#appVer");if(_v)_v.textContent=APP_VERSION;document.title="EA Forge "+APP_VERSION+" — AI Algorithm Builder";}catch(e){}
 const toast=(m)=>{const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),1800);};
@@ -2932,13 +2932,15 @@ function synthBars(n,seed){
 function median(a){if(!a.length)return null;const s=a.slice().sort((x,y)=>x-y);return s[s.length>>1];}
 function parseCSV(txt){
   // MT5 export: DATE TIME OPEN HIGH LOW CLOSE TICKVOL VOL SPREAD (tab); TradingView: time,o,h,l,c[,vol]
-  const lines=txt.trim().split(/\r?\n/);const bars=[];const sps=[];
+  const lines=txt.trim().split(/\r?\n/);const bars=[];const sps=[];let fixed=0;
   for(const ln of lines){
     const f=ln.split(/[,;\t]/).map(x=>x.trim());
     const ni=f.findIndex(x=>/^-?\d+\.?\d*$/.test(x));
     const nums=f.filter(x=>/^-?\d+\.?\d*$/.test(x)).map(Number);
     if(nums.length>=4){
-      const[o,h,l,c]=nums;if(!(h>=l&&o>0))continue;
+      let[o,h,l,c]=nums;if(!(h>=l&&o>0))continue;
+      const hi=Math.max(o,c),lo=Math.min(o,c);
+      if(h<hi||l>lo){fixed++;h=Math.max(h,hi);l=Math.min(l,lo);}   // impossible bar - make it consistent
       const bar={o,h,l,c};
       if(ni>0){const p=Date.parse(f.slice(0,ni).join(" ").replace(/\./g,"-"));if(!isNaN(p))bar.t=p;}   // leading date/time columns
       // 5th number = volume: MT5 export TICKVOL, or TradingView time,o,h,l,c,vol
@@ -2948,6 +2950,7 @@ function parseCSV(txt){
     }
   }
   bars._spMed=median(sps);
+  bars._fixed=fixed;   // surfaced on import so a bad feed is visible, not silently smoothed over
   return bars;
 }
 /* bundled REAL market data (embedded so the app never needs synthetic) */
@@ -4713,8 +4716,8 @@ function netWhy(err){
   if(hasNet())return "The pull reached the network but failed: "+(err||"unknown")+". Check AVG Web Shield HTTPS scanning, then retry.";
   const inFrame=(function(){try{return window.self!==window.top;}catch(e){return true;}})();
   return inFrame
-    ? "<b>This page cannot reach the internet.</b> Running inside claude.ai, the sandbox blocks every outside request — no setting fixes it. Use the <b>desktop app (V3.01 or newer)</b>, which pulls through Node with no CORS limit, or load data with <b>Upload CSV</b> / <b>Import a folder of CSVs</b> below."
-    : "<b>No data bridge in this build.</b> A plain browser can only reach Yahoo through a CORS proxy, and as of Aug 2026 the free ones are all dead or paid. The <b>desktop app V3.01+</b> fetches through Node instead — if you are already in the desktop app, you are on an older build that shipped without the bridge, so re-run the installer. Otherwise use <b>Upload CSV</b> / <b>Import a folder of CSVs</b>.";
+    ? "<b>This page cannot reach the internet.</b> Running inside claude.ai, the sandbox blocks every outside request — no setting fixes it. Use the <b>desktop app (V3.02 or newer)</b>, which pulls through Node with no CORS limit, or load data with <b>Upload CSV</b> / <b>Import a folder of CSVs</b> below."
+    : "<b>No data bridge in this build.</b> A plain browser can only reach Yahoo through a CORS proxy, and as of Aug 2026 the free ones are all dead or paid. The <b>desktop app V3.02+</b> fetches through Node instead — if you are already in the desktop app, you are on an older build that shipped without the bridge, so re-run the installer. Otherwise use <b>Upload CSV</b> / <b>Import a folder of CSVs</b>.";
 }
 // GET raw text: DESKTOP app → Node main process (no CORS, reliable); BROWSER → proxy fallbacks.
 async function httpGet(url){
@@ -5467,7 +5470,7 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
         const prev=BAKED[sym]||[];
         BAKED[sym]=(typeof mergeBars==="function"&&prev.length)?mergeBars(prev,bars):bars;
         const gm=(typeof medianGapDays==="function")?medianGapDays(BAKED[sym])*1440:60;
-        rows.push({sym,n:BAKED[sym].length,gran:gm<60?Math.round(gm)+"min":(gm/60).toFixed(0)+"h",
+        rows.push({sym,n:BAKED[sym].length,fixed:bars._fixed||0,gran:gm<60?Math.round(gm)+"min":(gm/60).toFixed(0)+"h",
           from:BAKED[sym][0].t?new Date(BAKED[sym][0].t).toISOString().slice(0,10):"?",
           to:BAKED[sym][BAKED[sym].length-1].t?new Date(BAKED[sym][BAKED[sym].length-1].t).toISOString().slice(0,10):"?"});
         ok++;
@@ -5477,7 +5480,8 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
       if(BAKED[D.sym]&&typeof applyPair==="function")applyPair(D.sym);
       out.innerHTML='<div style="color:'+(ok?"var(--buy)":"var(--warn)")+'">'+(ok?"✓ ":"")+ok+' file(s) imported'+(fail?', '+fail+' skipped (unreadable or no symbol in the filename)':'')+'</div>'+
         (rows.length?'<table style="margin-top:5px;border-collapse:collapse;font-size:11px;font-family:var(--mono)">'+
-          rows.map(r=>'<tr><td style="padding:1px 10px 1px 0"><b>'+r.sym+'</b></td><td style="padding:1px 10px 1px 0">'+r.n.toLocaleString()+' bars</td><td style="padding:1px 10px 1px 0">'+r.gran+'</td><td style="color:var(--muted)">'+r.from+' → '+r.to+'</td></tr>').join("")+'</table>':'')+
+          rows.map(r=>'<tr><td style="padding:1px 10px 1px 0"><b>'+r.sym+'</b></td><td style="padding:1px 10px 1px 0">'+r.n.toLocaleString()+' bars</td><td style="padding:1px 10px 1px 0">'+r.gran+'</td><td style="color:var(--muted)">'+r.from+' → '+r.to+'</td>'+
+            (r.fixed?'<td style="color:var(--warn);padding-left:10px">'+r.fixed+' bad bars repaired</td>':'<td></td>')+'</tr>').join("")+'</table>':'')+
         '<div class="hint" style="margin-top:4px">Symbol is taken from each filename (EURUSD_M1_2019.csv → EURUSD). Re-importing merges with what you already have instead of replacing it.</div>';
       many.value="";
     };
