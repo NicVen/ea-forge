@@ -1,3 +1,12 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-store">
+<title>EA Forge V3.00 — AI Algorithm Builder</title>
+</head>
+<body>
 <style>
   :root{
     --bg:#0a0e15; --panel:#121826; --panel2:#0f1420; --line:#232c3d;
@@ -167,6 +176,31 @@
   body.merger #improve{display:none}
   #advNote{color:var(--faint);font-size:11px;font-family:var(--mono);margin:20px 0 2px;text-transform:uppercase;letter-spacing:1.5px}
   body.expert #advNote{display:block}
+  body.showcode #codeCard,body.showcode #dl{display:block}
+  /* ===== V3.00 ONE FLOW: phase grouping + permanent objective bar ===== */
+  #gwObjective{position:sticky;top:0;z-index:30;margin:-2px 0 12px;padding:10px 13px;border-radius:9px;
+    background:linear-gradient(90deg,color-mix(in srgb,var(--buy) 13%,var(--panel2)),var(--panel2));
+    border:1px solid color-mix(in srgb,var(--buy) 32%,var(--line));backdrop-filter:blur(6px)}
+  #gwObjective .ob-l{font-family:var(--mono);font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint);display:inline-block;width:42px;flex:0 0 42px}
+  #gwObjective .ob-r{display:flex;gap:8px;align-items:baseline;margin:2px 0;font-size:12.5px;line-height:1.5}
+  #gwObjective .ob-goal{color:var(--ink);font-weight:600}
+  #gwObjective .ob-now{color:var(--buy);font-weight:700}
+  #gwObjective .ob-why{color:var(--muted);font-size:11.5px}
+  #gwObjective .ob-bar{height:5px;border-radius:3px;background:var(--panel);overflow:hidden;margin-top:8px}
+  #gwObjective .ob-fill{height:100%;background:var(--grad,var(--buy));transition:width .3s}
+  .gw-phase{border:1px solid var(--line);border-radius:10px;margin:10px 0;overflow:hidden;background:var(--panel)}
+  .gw-phase.act{border-color:color-mix(in srgb,var(--buy) 45%,var(--line));box-shadow:0 0 0 1px color-mix(in srgb,var(--buy) 14%,transparent)}
+  .gw-ph-h{display:flex;align-items:center;gap:9px;padding:9px 12px;background:var(--panel2);cursor:pointer;user-select:none;font-size:12.5px}
+  .gw-ph-n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;background:var(--faint);color:var(--panel);font-size:10px;font-weight:800;flex:0 0 auto}
+  .gw-phase.act .gw-ph-n{background:var(--grad,var(--buy));color:#062}
+  .gw-phase.fin .gw-ph-n{background:var(--buy);color:#04120a}
+  .gw-ph-g{color:var(--muted);font-size:11px;flex:1}
+  .gw-ph-s{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+  .gw-ph-b{padding:2px 12px 8px}
+  .gw-phase.collapsed .gw-ph-b{display:none}
+  .gw-phase.collapsed .gw-ph-h{opacity:.72}
+  #expertToggle{margin-top:22px;opacity:.5;font-size:11px}
+  #expertToggle:hover{opacity:1}
 </style>
 
 
@@ -182,19 +216,18 @@
 
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<title>EA Forge V2.52 — AI Algorithm Builder</title>
+<title>EA Forge V3.00 — AI Algorithm Builder</title>
 <div class="wrap">
 <header>
   <div class="brand">
     <div class="mark">EA</div>
     <div>
-      <b>EA Forge <span id="appVer" class="verpill">V2.52</span></b><br><span>algorithm builder · mt5 + pine</span>
+      <b>EA Forge <span id="appVer" class="verpill">V3.00</span></b><br><span>algorithm builder · mt5 + pine</span>
     </div>
   </div>
   <div class="spacer"></div>
   <div class="tbar">
-    <div class="seg" title="View"><button id="vBuilder" class="on">Builder</button><button id="vMerger">Merger</button><button id="vImprove">Improve</button></div>
-    <div class="seg" title="Detail level"><button id="mAdv" class="on">Advanced</button><button id="mExpert">Expert</button></div>
+    <div class="seg" title="What you are doing"><button id="vBuilder" class="on">Build an EA</button><button id="vMerger">Combine EAs</button><button id="vImprove">Improve an EA</button></div>
     <div class="seg" title="Theme">
       <button id="thL">Light</button><button id="thD" class="on">Dark</button>
     </div>
@@ -211,14 +244,16 @@
 <div id="gwiz" class="card" style="margin-top:18px;border-color:var(--buy);box-shadow:0 0 0 1px color-mix(in srgb,var(--buy) 16%,transparent)">
   <div class="hd" style="background:linear-gradient(90deg,color-mix(in srgb,var(--buy) 16%,var(--panel2)),var(--panel2))">
     <div class="n" style="background:var(--buy);color:#062">🧭</div>
-    <h3>Guided Wizard — the full 25-step pipeline</h3>
-    <div class="tag">each step locks the last · the AI does the work &amp; explains its reasoning</div>
+    <h3>Build an EA — one flow, five phases</h3>
+    <div class="tag">the goal stays on screen · finished phases fold away · the machine does the work and shows its proof</div>
   </div>
   <div class="bd">
-    <div class="hint" style="margin:-2px 0 12px">Works on <b>any market — forex, indices, stocks, crypto</b> (bundled pairs run offline; anything else pulls live data in step 4). Walk the <b>whole build</b> end to end — broker → data → strategy discovery → evolution → research → best-timeframe → worst-case backtest → visual go-live proof → download. At each step the <b>AI does the heavy work, shows you what it chose and why</b>, and you <b>confirm to lock it in</b>. A step stays locked until the one before it is confirmed. Nothing is faked — if a step can't produce a genuine edge it tells you.</div>
+    <div class="hint" style="margin:-2px 0 12px">One path, top to bottom, in five phases: <b>Set up → Discover → Configure → Prove → Ship</b>. You never have to go looking for a setting — each step shows you what it is for, does the heavy work itself, and locks when you confirm. Finished phases collapse so the page stays short, and the bar at the top always says what you are building and why this step matters. Works on <b>any market — forex, indices, stocks, crypto</b>. Nothing is faked: if a step can't produce a genuine edge, it says so.</div>
 
-    <div id="gwProg" style="font-family:var(--mono);font-size:11px;color:var(--faint);margin-bottom:6px"></div>
+    <div id="gwObjective"></div>
     <div id="gwSteps"></div>
+    <div id="gwProg" style="font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:10px"></div>
+    <button class="ghost" id="expertToggle">⚙ Open manual toolkit (not needed for the guided build)</button>
   </div>
 </div>
 <style>
@@ -1103,7 +1138,7 @@
 
 <script>
 "use strict";
-const APP_VERSION="V2.40";   // single source of truth — bump on every change (small: +0.01 · major: next integer .00). Mirror in package.json.
+const APP_VERSION="V3.00";   // single source of truth — bump on every change (small: +0.01 · major: next integer .00). Mirror in package.json.
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 try{const _v=document.querySelector("#appVer");if(_v)_v.textContent=APP_VERSION;document.title="EA Forge "+APP_VERSION+" — AI Algorithm Builder";}catch(e){}
 const toast=(m)=>{const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),1800);};
@@ -1323,7 +1358,7 @@ let S={
   markov:{on:false,file:"markov_regime.txt",common:true},
   prop:{on:false,preset:"fnstellar",init:6000,daily:5,max:10,halt:true,ddType:"static",target:10,riskPct:1,minDays:0,phase:"challenge",consist:0,withdraw:0},
   custom:[],
-  exits:{bars:0,opposite:false},exitLong:[],exitShort:[],
+  exits:{bars:0,opposite:false,eod:false,friday:null,sessEnd:false},exitLong:[],exitShort:[],
   workflow:[],
   broker:{id:"blackbull",sym:"XAUUSD"},
   atm:{on:false,exits:[{size:50,atR:1},{size:50,atR:2}],be:true,beAfter:1},
@@ -1485,7 +1520,8 @@ function renderMeta(){
   $("#ppCfg").style.display=S.prop.on?"":"none";
   $("#ppPreset").value=S.prop.preset;$("#ppInit").value=S.prop.init;$("#ppDaily").value=S.prop.daily;$("#ppMax").value=S.prop.max;$("#ppHalt").value=S.prop.halt?"1":"0";const ppt=document.querySelector("#ppType");if(ppt)ppt.value=S.prop.ddType||"static";const ptg=document.querySelector("#ppTarget");if(ptg)ptg.value=S.prop.target!=null?S.prop.target:10;const prk=document.querySelector("#ppRisk");if(prk)prk.value=S.prop.riskPct||1;const pmd=document.querySelector("#ppMinDays");if(pmd)pmd.value=S.prop.minDays||0;
 }
-function sync(){if(!Array.isArray(S.custom))S.custom=[];if(!S.exits)S.exits={bars:0,opposite:false};if(!Array.isArray(S.exitLong))S.exitLong=[];if(!Array.isArray(S.exitShort))S.exitShort=[];renderIndPick();renderIndList();renderRules();renderCustomBuilder();renderExits();renderMeta();if(!Array.isArray(S.workflow))S.workflow=[];if(!S.atm||!Array.isArray(S.atm.exits))S.atm={on:false,exits:[{size:50,atR:1},{size:50,atR:2}],be:true,beAfter:1};if(!S.entry||!S.entry.type)S.entry={type:"market",off:0.5,wait:5};renderWF();renderATM();buildCode();const fb=document.querySelector("#fnBase");if(fb)fb.textContent="base TF: "+S.tf;const lb=document.querySelector("#libInfo");if(lb)lb.textContent="base TF: "+S.tf;const bs=document.querySelector("#btSym");if(bs)bs.value=S.sym;}
+function sync(){if(!Array.isArray(S.custom))S.custom=[];if(!S.exits)S.exits={bars:0,opposite:false,eod:false,friday:null,sessEnd:false};
+  if(S.exits.eod===undefined)S.exits.eod=false;if(S.exits.friday===undefined)S.exits.friday=null;if(S.exits.sessEnd===undefined)S.exits.sessEnd=false;if(!Array.isArray(S.exitLong))S.exitLong=[];if(!Array.isArray(S.exitShort))S.exitShort=[];renderIndPick();renderIndList();renderRules();renderCustomBuilder();renderExits();renderMeta();if(!Array.isArray(S.workflow))S.workflow=[];if(!S.atm||!Array.isArray(S.atm.exits))S.atm={on:false,exits:[{size:50,atR:1},{size:50,atR:2}],be:true,beAfter:1};if(!S.entry||!S.entry.type)S.entry={type:"market",off:0.5,wait:5};renderWF();renderATM();buildCode();const fb=document.querySelector("#fnBase");if(fb)fb.textContent="base TF: "+S.tf;const lb=document.querySelector("#libInfo");if(lb)lb.textContent="base TF: "+S.tf;const bs=document.querySelector("#btSym");if(bs)bs.value=S.sym;}
 
 /* ---------- inputs ---------- */
 $("#mName").oninput=e=>{S.name=e.target.value.replace(/[^A-Za-z0-9_]/g,"")||"MyEdge";S._userNamed=true;buildCode();};
@@ -1801,10 +1837,22 @@ function genMQL5(){
   if(isEA&&S.sess!=="off"){
     o.push(`bool InSession(){`);
     o.push(`   MqlDateTime t; TimeToStruct(TimeCurrent(),t); int h=t.hour; // server time`);
-    const cond={london:"(h>=7 && h<16)",ny:"(h>=12 && h<21)",lonny:"(h>=7 && h<21)"}[S.sess];
+    const cond={london:"(h>=7 && h<16)",ny:"(h>=12 && h<21)",lonny:"(h>=7 && h<21)",asian:"(h>=22 || h<7)"}[S.sess]||"true";
     o.push(`   return ${cond};`);
     o.push(`}`);o.push(``);
   }
+  // ---- time-based flat rules (end of day / Friday / session end) — identical logic to the backtest ----
+  if(isEA){const _t=S.exits||{};const _f=(_t.friday==null||_t.friday===false)?null:(_t.friday===true?20:+_t.friday);
+    if(_t.eod||_f!=null||_t.sessEnd){
+      o.push(`bool TimeFlat(){`);
+      o.push(`   MqlDateTime t; TimeToStruct(TimeCurrent(),t); int h=t.hour; int dw=t.day_of_week;`);
+      const cs=[];
+      if(_f!=null)cs.push(`(dw==5 && h>=${_f})`);
+      if(_t.eod)cs.push(`(h>=23)`);
+      if(_t.sessEnd&&S.sess!=="off")cs.push(`(!InSession())`);
+      o.push(`   return ${cs.length?cs.join(" || "):"false"};`);
+      o.push(`}`);o.push(``);
+    }}
   if(isEA){
     o.push(`int CountOpen(){ int c=0; for(int i=PositionsTotal()-1;i>=0;i--){ if(PositionGetTicket(i)>0 && PositionGetInteger(POSITION_MAGIC)==InpMagic) c++; } return c; }`);
     o.push(``);
@@ -1989,7 +2037,9 @@ function genMQL5(){
   {const ak=activeKeys();
    const exL=(S.exitLong||[]).filter(id=>ruleValid(id,ak)).map(id=>ruleExpr(id,"mql5"));
    const exS=(S.exitShort||[]).filter(id=>ruleValid(id,ak)).map(id=>ruleExpr(id,"mql5"));
-   const hasExit=(S.exits.bars>0)||S.exits.opposite||exL.length||exS.length;
+   const _tf=S.exits||{};const _fr=(_tf.friday==null||_tf.friday===false)?null:(_tf.friday===true?20:+_tf.friday);
+   const _hasTF=!!_tf.eod||_fr!=null||!!_tf.sessEnd;
+   const hasExit=(S.exits.bars>0)||S.exits.opposite||exL.length||exS.length||_hasTF;
    if(hasExit){
      o.push(`   // ---- exit rules (time / opposite / custom) ----`);
      o.push(`   bool exitLongSig  = ${exL.length?"("+exL.join(" || ")+")":"false"};`);
@@ -2000,7 +2050,7 @@ function genMQL5(){
      o.push(`      long _typ=PositionGetInteger(POSITION_TYPE);`);
      o.push(`      bool _held=(TimeCurrent()-(datetime)PositionGetInteger(POSITION_TIME))>=InpMinHoldSec;`);
      o.push(`      if(InpScalpMgr && !_held) continue;   // MIN-HOLD: never close a trade before InpMinHoldSec (prop violation guard)`);
-     o.push(`      bool _tExit=${S.exits.bars>0?"(iBarShift(_Symbol,_Period,(datetime)PositionGetInteger(POSITION_TIME))>=InpExitBars)":"false"};`);
+     o.push(`      bool _tExit=${S.exits.bars>0?"(iBarShift(_Symbol,_Period,(datetime)PositionGetInteger(POSITION_TIME))>=InpExitBars)":"false"}${_hasTF?" || TimeFlat()":""};`);
      o.push(`      if(_typ==POSITION_TYPE_BUY  && (_tExit || ${S.exits.opposite?"shortSig || ":""}exitLongSig))  { trade.PositionClose(_tk); continue; }`);
      o.push(`      if(_typ==POSITION_TYPE_SELL && (_tExit || ${S.exits.opposite?"longSig || ":""}exitShortSig)) { trade.PositionClose(_tk); continue; }`);
      o.push(`   }`);
@@ -2246,7 +2296,7 @@ function genPine(){
   o.push(``);
   // session
   if(isEA&&S.sess!=="off"){
-    const sm={london:'"0700-1600"',ny:'"1200-2100"',lonny:'"0700-2100"'}[S.sess];
+    const sm={london:'"0700-1600"',ny:'"1200-2100"',lonny:'"0700-2100"',asian:'"2200-0700"'}[S.sess]||'"0000-2400"';
     o.push(`inSess = not na(time(timeframe.period, ${sm}, "GMT"))`);
   }
   o.push(``);
@@ -2323,18 +2373,25 @@ function genPine(){
   {const ak=activeKeys();
    const exL=(S.exitLong||[]).filter(id=>ruleValid(id,ak)).map(id=>ruleExpr(id,"pine"));
    const exS=(S.exitShort||[]).filter(id=>ruleValid(id,ak)).map(id=>ruleExpr(id,"pine"));
-   const hasExit=(S.exits.bars>0)||S.exits.opposite||exL.length||exS.length;
+   const _pt=S.exits||{};const _pfr=(_pt.friday==null||_pt.friday===false)?null:(_pt.friday===true?20:+_pt.friday);
+   const _pTF=[];
+   if(_pfr!=null)_pTF.push(`(dayofweek == dayofweek.friday and hour >= ${_pfr})`);
+   if(_pt.eod)_pTF.push(`(hour >= 23)`);
+   if(_pt.sessEnd&&S.sess!=="off")_pTF.push(`(not sessOK)`);
+   const hasExit=(S.exits.bars>0)||S.exits.opposite||exL.length||exS.length||_pTF.length;
    if(hasExit){
      o.push(``);o.push(`// ---- exit rules ----`);
+     if(_pTF.length)o.push(`timeFlat = ${_pTF.join(" or ")}`);
      if(S.exits.bars>0)o.push(`in_exitBars = input.int(${S.exits.bars}, "Exit after N bars in trade (0=off)")`);
      o.push(`exitLongSig  = ${exL.length?exL.join(" or "):"false"}`);
      o.push(`exitShortSig = ${exS.length?exS.join(" or "):"false"}`);
      const held=`(bar_index - strategy.opentrades.entry_bar_index(0))`;
+     const fL=_pTF.length?`timeFlat or `:"";
      const tL=S.exits.bars>0?`${held} >= in_exitBars or `:"",oL=S.exits.opposite?`shortSig or `:"";
      const tS=S.exits.bars>0?`${held} >= in_exitBars or `:"",oS=S.exits.opposite?`longSig or `:"";
-     o.push(`if strategy.position_size > 0 and (${tL}${oL}exitLongSig)`);
+     o.push(`if strategy.position_size > 0 and (${fL}${tL}${oL}exitLongSig)`);
      o.push(`    strategy.close("L", "exit")`);
-     o.push(`if strategy.position_size < 0 and (${tS}${oS}exitShortSig)`);
+     o.push(`if strategy.position_size < 0 and (${fL}${tS}${oS}exitShortSig)`);
      o.push(`    strategy.close("S", "exit")`);
    }}
   o.push(``);
@@ -2371,7 +2428,34 @@ function buildCode(){
 $$(".tab").forEach(t=>t.onclick=()=>{$$(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");TAB=t.dataset.t;buildCode();});
 
 /* ---------- export/import/download ---------- */
-function download(name,text){const b=new Blob([text],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
+/* Saving a file has two paths.
+   Desktop app / local .html: the ordinary anchor download, which works and keeps the .mq5 / .pine name.
+   Inside the claude.ai artifact frame: anchor downloads are inert, so route through the host's save
+   dialog instead. That dialog only accepts a fixed extension list, and .mq5 / .pine are not on it, so
+   those are saved as .txt and the toast says to rename. Honest about the rename rather than silently
+   handing you a file that will not open in MetaEditor. */
+const DL_OK=/\.(txt|json|md|csv|html|svg|pdf|png|jpg|jpeg|gif|webp|mp4|webm|docx|pptx|epub|ttf)$/i;
+let _dlCap;
+function _dl(){ if(_dlCap===undefined) _dlCap=(window.claude&&claude.use)?claude.use("downloads").catch(()=>null):Promise.resolve(null); return _dlCap; }
+function download(name,text){
+  const anchor=()=>{const b=new Blob([text],{type:"text/plain"});const u=URL.createObjectURL(b);
+    const a=document.createElement("a");a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);};
+  if(window.eaforge&&window.eaforge.isDesktop){anchor();return;}          // desktop: native download works
+  _dl().then(async d=>{
+    if(!d||!d.save){anchor();return;}                                      // local file / plain browser
+    const safe=DL_OK.test(name)?name:name+".txt";
+    try{
+      await d.save({filename:safe,data:new TextEncoder().encode(text)});
+      if(safe!==name)toast("Saved as "+safe+" — rename it to "+name+" before using it");
+      else toast("Saved "+safe);
+    }catch(e){
+      const c=(e&&e.code)||"";
+      if(c==="declined")return;
+      if(c==="rate_limited"){toast("Save already open — try again in a second");return;}
+      anchor();                                                            // last resort
+    }
+  }).catch(anchor);
+}
 $("#copyBtn").onclick=()=>{navigator.clipboard.writeText(TAB==="mql5"?window._code.mql5:window._code.pine).then(()=>toast("Copied "+TAB));};
 // .ex5 compile — desktop app only (needs MetaEditor). Hidden in the browser/artifact.
 (function wireEx5(){const btn=$("#compileEx5"),out=$("#ex5Out");if(!btn)return;
@@ -2419,7 +2503,7 @@ $("#loadEx").onclick=()=>{
     entry:{type:"market",off:0.5,wait:5}};
   sync();analyze();
   try{buildCode();}catch(e){}                    // generate the EA code immediately
-  try{setMode("expert");}catch(e){}              // reveal the code card (hidden in Advanced) + manual toolkit
+  try{document.body.classList.add("showcode");}catch(e){}   // reveal ONLY the code card - no mode switch, no toolkit
   setTimeout(()=>{const cc=document.getElementById("codeCard");if(cc)cc.scrollIntoView({behavior:"smooth",block:"start"});},150);
   toast("⭐ Proven gold edge loaded — the EA code is ready below, press Download code ▾");
 };
@@ -2437,6 +2521,51 @@ function stochCalc(h,l,c,k){const o=Array(c.length).fill(NA);for(let i=k-1;i<c.l
 function adxCalc(h,l,c,p){const n=c.length,o=Array(n).fill(NA);const pdm=Array(n).fill(0),ndm=Array(n).fill(0),tr=Array(n).fill(0);for(let i=1;i<n;i++){const up=h[i]-h[i-1],dn=l[i-1]-l[i];pdm[i]=(up>dn&&up>0)?up:0;ndm[i]=(dn>up&&dn>0)?dn:0;tr[i]=Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1]));}let atrS=0,pS=0,nS=0;const dx=Array(n).fill(NA);for(let i=1;i<n;i++){if(i<=p){atrS+=tr[i];pS+=pdm[i];nS+=ndm[i];}else{atrS=atrS-atrS/p+tr[i];pS=pS-pS/p+pdm[i];nS=nS-nS/p+ndm[i];}if(i>=p){const pDI=100*pS/atrS,nDI=100*nS/atrS;dx[i]=100*Math.abs(pDI-nDI)/((pDI+nDI)||1);}}let a;for(let i=p;i<n;i++){if(isNaN(dx[i]))continue;a=(i<2*p||a===undefined)?dx[i]:(a*(p-1)+dx[i])/p;if(i>=2*p)o[i]=a;}return o;}
 
 function guessPoint(px){return px>=100?0.01:px>=1?0.0001:0.00001;}
+/* ===== V3.00 EXECUTION REALISM - session window + overnight swap =====
+   Before V3.00 the JS backtest ignored BOTH: a "London-only" strategy was simulated 24h while the
+   generated EA/Pine really did gate on session, and a swing strategy paid no rollover. Backtest and
+   live could therefore never agree. Both are now priced in. */
+const SESS_HRS={london:[7,16],ny:[12,21],lonny:[7,21],asian:[22,7]};
+function brokerTzOff(){try{const b=BROKERS[(S.broker&&S.broker.id)||"blackbull"];const m=/GMT([+-]\d+)/.exec((b&&b.tz)||"");return m?+m[1]:0;}catch(e){return 0;}}
+// bar timestamps are UTC; the generated EA compares BROKER-SERVER hours, so shift by the broker's GMT offset
+function sessOK(t,sess){
+  if(!sess||sess==="off")return true;
+  const w=SESS_HRS[sess];if(!w)return true;
+  if(t==null)return true;                                  // undated bars: cannot filter - do not fake it
+  const h=(((new Date(t)).getUTCHours())+brokerTzOff()+24)%24;
+  return w[0]<w[1]?(h>=w[0]&&h<w[1]):(h>=w[0]||h<w[1]);
+}
+/* Time-based flat rules. Prop firms commonly forbid holding over the weekend, swap punishes overnight
+   holds, and a session strategy that keeps a position after its session is not the strategy you tested.
+   All three are evaluated on BROKER-SERVER time, exactly like the generated EA. */
+function timeFlat(t,tNext,o){
+  if(t==null||!o)return false;
+  const off=brokerTzOff(),d=new Date(t),h=((d.getUTCHours()+off+24)%24),dow=d.getUTCDay();
+  if(o.friday!=null&&dow===5&&h>=o.friday)return true;             // flat before the weekend gap
+  if(o.eod&&o.intraday&&tNext!=null){                              // last bar of the server day
+    const h2=(((new Date(tNext)).getUTCHours()+off+24)%24);
+    if(h2<h)return true;
+  }
+  if(o.sessEnd&&o.sess&&o.sess!=="off"){
+    const w=SESS_HRS[o.sess];
+    if(w&&!(w[0]<w[1]?(h>=w[0]&&h<w[1]):(h>=w[0]||h<w[1])))return true;
+  }
+  return false;
+}
+// swap/rollover expressed in R. Charged per night held; Wednesday rollover is triple (industry standard).
+// INSTR swapL/swapS are points/night and NEGATIVE for a cost, so this reduces R.
+function swapCostR(sym,side,t0,t1,dist,px){
+  const inst=INSTR[sym];if(!inst||!dist||t0==null||t1==null||t1<=t0)return 0;
+  const sw=side===1?inst.swapL:inst.swapS;if(sw==null)return 0;
+  const d0=Math.floor(t0/86400000),d1=Math.floor(t1/86400000);
+  if(d1<=d0)return 0;
+  let nights=0;
+  for(let d=d0+1;d<=d1;d++){const dow=(new Date(d*86400000)).getUTCDay();
+    if(dow===6||dow===0)continue;                          // weekend - no rollover charged
+    nights+=(dow===3?3:1);}                                // Wednesday = triple
+  if(!nights)return 0;
+  return nights*sw*guessPoint(px)/dist;
+}
 // ---- volume-weighted (need real per-bar volume: bar.v) ----
 function hasVol(bars){for(const b of bars)if(b.v>0)return true;return false;}
 function vwapCalc(bars,p){const n=bars.length,o=Array(n).fill(NA);if(!hasVol(bars))return{o,noVol:true};
@@ -2590,16 +2719,22 @@ function simulate(bars,strat){
   // ---- exit rules (V1.06): time exit · opposite-signal exit · custom exit conditions ----
   const exC=strat.exits||{};const exBars=Math.max(0,exC.bars||0),exOpp=!!exC.opposite;
   const exitLong=strat.exitLong||[],exitShort=strat.exitShort||[];
-  const hasExitRules=exBars>0||exOpp||exitLong.length||exitShort.length;
+  const barMin=(bars.length>2&&bars[1].t!=null&&bars[0].t!=null)?(bars[1].t-bars[0].t)/60000:60;
+  const tflag={eod:!!exC.eod,friday:(exC.friday==null||exC.friday===false)?null:(exC.friday===true?20:+exC.friday),
+               sessEnd:!!exC.sessEnd,sess:strat.sess||S.sess||"off",intraday:barMin<1200};
+  const hasTimeFlat=tflag.eod||tflag.friday!=null||tflag.sessEnd;
+  const hasExitRules=exBars>0||exOpp||exitLong.length||exitShort.length||hasTimeFlat;
   let pos=null,pend=null;
+  const sess=strat.sess||S.sess||"off";
   const cost=(p)=>p.dist>0?(costPts*guessPoint(p.entry))/p.dist:0;
-  const close=(outcome)=>{trades.push(outcome-cost(pos));pos=null;};
+  const swp=(p,tx)=>swapCostR(S.sym,p.side,p.entryT,tx,p.dist,p.entry);
+  const close=(outcome,tx)=>{trades.push(outcome-cost(pos)+swp(pos,tx));pos=null;};
   for(let i=warm;i<n-1;i++){
     const b=bars[i];
     if(pos){
       if(!atm){
-        if(pos.side===1){ if(b.l<=pos.sl)close(-1); else if(b.h>=pos.tp)close(tpR); }
-        else{ if(b.h>=pos.sl)close(-1); else if(b.l<=pos.tp)close(tpR); }
+        if(pos.side===1){ if(b.l<=pos.sl)close(-1,b.t); else if(b.h>=pos.tp)close(tpR,b.t); }
+        else{ if(b.h>=pos.sl)close(-1,b.t); else if(b.l<=pos.tp)close(tpR,b.t); }
       }else{
         // SL first (BE-moved remainder stops at 0R)
         const hitSL=pos.side===1?b.l<=pos.slL:b.h>=pos.slL;
@@ -2612,29 +2747,31 @@ function simulate(bars,strat){
               if(atm.be&&pos.filled>=(atm.beAfter||1)){pos.slL=pos.entry;pos.be=true;} }
           }
         }
-        if(pos.rem<=1e-9){ trades.push(pos.banked-cost(pos)); pos=null; }
+        if(pos.rem<=1e-9){ trades.push(pos.banked-cost(pos)+swp(pos,b.t)); pos=null; }
       }
       // exit rules — evaluated at the bar CLOSE, after intrabar SL/TP had their chance
       if(pos&&hasExitRules){
         const held=i-(pos.entryBar||i);
         let doExit=false;
         if(exBars>0&&held>=exBars)doExit=true;
+        else if(hasTimeFlat&&timeFlat(b.t,(bars[i+1]||{}).t,tflag))doExit=true;
         else if(exOpp&&(pos.side===1?sideSig(strat.shortRules,o,i,strat):sideSig(strat.longRules,o,i,strat)))doExit=true;
         else{const eids=pos.side===1?exitLong:exitShort;if(eids.length&&anyExitSig(eids,o,i,strat))doExit=true;}
         if(doExit){
           const mktR=pos.side===1?(o.c[i]-pos.entry)/pos.dist:(pos.entry-o.c[i])/pos.dist;
-          if(!atm)close(mktR);
-          else{pos.banked+=pos.rem*mktR;trades.push(pos.banked-cost(pos));pos=null;}
+          if(!atm)close(mktR,b.t);
+          else{pos.banked+=pos.rem*mktR;trades.push(pos.banked-cost(pos)+swp(pos,b.t));pos=null;}
         }
       }
       if(pos)continue;
     }
     if(pend){   // pending stop/limit order: fill when price reaches it, else expire
       const fill=pend.type==="stop"?(pend.side===1?b.h>=pend.px:b.l<=pend.px):(pend.side===1?b.l<=pend.px:b.h>=pend.px);
-      if(fill){pos=mkPos(pend.side,pend.px,pend.dist,atm,tpR);pos.entryBar=i;pend=null;}
+      if(fill){pos=mkPos(pend.side,pend.px,pend.dist,atm,tpR);pos.entryBar=i;pos.entryT=b.t;pend=null;}
       else if(i>=pend.expire)pend=null;
       continue;
     }
+    if(!sessOK(b.t,sess))continue;   // trade only inside the configured session - same gate the generated EA uses
     const L=sideSig(strat.longRules,o,i,strat),Sh=sideSig(strat.shortRules,o,i,strat);
     if(L||Sh){
       const px=o.c[i];const dist=strat.slMode==="atr"?((o.atr?o.atr[i]:NA)*strat.sl):(strat.sl*guessPoint(px));
@@ -2643,12 +2780,12 @@ function simulate(bars,strat){
       // REALISTIC FILL: a signal confirmed at bar i's CLOSE can only be filled at the NEXT bar's OPEN
       // (same as TradingView/MT5 live). Filling at the signal close is look-ahead optimism that makes
       // in-app edges vanish on TradingView. Enter at open[i+1]; SL/TP may be hit within that same bar.
-      if(et.type==="market"){const fillPx=(bars[i+1]&&bars[i+1].o!=null)?bars[i+1].o:px;pos=mkPos(side,fillPx,dist,atm,tpR);pos.entryBar=i+1;}
+      if(et.type==="market"){const fillPx=(bars[i+1]&&bars[i+1].o!=null)?bars[i+1].o:px;pos=mkPos(side,fillPx,dist,atm,tpR);pos.entryBar=i+1;pos.entryT=(bars[i+1]&&bars[i+1].t!=null)?bars[i+1].t:b.t;}
       else{const atr=(o.atr?o.atr[i]:dist)||dist;const off=(et.off||0.5)*atr;const epx=et.type==="stop"?(side===1?px+off:px-off):(side===1?px-off:px+off);pend={side,px:epx,type:et.type,dist,expire:i+(et.wait||5)};}
     }
   }
   // ATM: close leftover fraction at final bar (banked partials preserved)
-  if(pos&&atm&&pos.rem>0){const last=bars[n-1];const r=pos.side===1?(last.c-pos.entry)/pos.dist:(pos.entry-last.c)/pos.dist;pos.banked+=pos.rem*r;trades.push(pos.banked-cost(pos));}
+  if(pos&&atm&&pos.rem>0){const last=bars[n-1];const r=pos.side===1?(last.c-pos.entry)/pos.dist:(pos.entry-last.c)/pos.dist;pos.banked+=pos.rem*r;trades.push(pos.banked-cost(pos)+swp(pos,last.t));}
   return trades;
 }
 // ---- metrics ----
@@ -3949,17 +4086,36 @@ function simDetailed(bars,strat){
   strat=strat||S;const o=calcInds(bars,strat);const n=bars.length;const trades=[];
   const warm=Math.max(30,...strat.inds.map(i=>Math.max(...Object.values(i.params))));
   const costPts=(BT.spreadPts||0)+(BT.slipPts||0)+(BT.commPts||0);const tpR=strat.tp;const et=strat.entry||{type:"market"};let pos=null,pend=null;
-  const close=(out,idx)=>{const costR=pos.dist>0?(costPts*guessPoint(pos.entry))/pos.dist:0;trades.push({r:out-costR,exit:idx,side:pos.side});pos=null;};
+  const sess=strat.sess||S.sess||"off";
+  const exC=strat.exits||{};const exBars=Math.max(0,exC.bars||0),exOpp=!!exC.opposite;
+  const exitLong=strat.exitLong||[],exitShort=strat.exitShort||[];
+  const barMin=(bars.length>2&&bars[1].t!=null&&bars[0].t!=null)?(bars[1].t-bars[0].t)/60000:60;
+  const tflag={eod:!!exC.eod,friday:(exC.friday==null||exC.friday===false)?null:(exC.friday===true?20:+exC.friday),
+               sessEnd:!!exC.sessEnd,sess,intraday:barMin<1200};
+  const hasTimeFlat=tflag.eod||tflag.friday!=null||tflag.sessEnd;
+  const hasExitRules=exBars>0||exOpp||exitLong.length||exitShort.length||hasTimeFlat;
+  const close=(out,idx)=>{const costR=pos.dist>0?(costPts*guessPoint(pos.entry))/pos.dist:0;
+    const sw=swapCostR(S.sym,pos.side,pos.entryT,(bars[idx]||{}).t,pos.dist,pos.entry);
+    trades.push({r:out-costR+sw,exit:idx,side:pos.side});pos=null;};
   for(let i=warm;i<n-1;i++){
     const b=bars[i];
     if(pos){
       if(pos.side===1){if(b.l<=pos.sl)close(-1,i);else if(b.h>=pos.tp)close(tpR,i);}
       else{if(b.h>=pos.sl)close(-1,i);else if(b.l<=pos.tp)close(tpR,i);}
+      if(pos&&hasExitRules){   // mirrors simulate() so the $ figures cannot disagree with the R figures
+        const held=i-(pos.entryBar||i);let doExit=false;
+        if(exBars>0&&held>=exBars)doExit=true;
+        else if(hasTimeFlat&&timeFlat(b.t,(bars[i+1]||{}).t,tflag))doExit=true;
+        else if(exOpp&&(pos.side===1?sideSig(strat.shortRules,o,i,strat):sideSig(strat.longRules,o,i,strat)))doExit=true;
+        else{const eids=pos.side===1?exitLong:exitShort;if(eids.length&&anyExitSig(eids,o,i,strat))doExit=true;}
+        if(doExit)close(pos.side===1?(o.c[i]-pos.entry)/pos.dist:(pos.entry-o.c[i])/pos.dist,i);
+      }
       if(pos)continue;}
-    if(pend){const fill=pend.type==="stop"?(pend.side===1?b.h>=pend.px:b.l<=pend.px):(pend.side===1?b.l<=pend.px:b.h>=pend.px);if(fill){const s=pend.side,ep=pend.px,d=pend.dist;pos={side:s,entry:ep,dist:d,sl:s===1?ep-d:ep+d,tp:s===1?ep+d*tpR:ep-d*tpR};pend=null;}else if(i>=pend.expire)pend=null;continue;}
+    if(pend){const fill=pend.type==="stop"?(pend.side===1?b.h>=pend.px:b.l<=pend.px):(pend.side===1?b.l<=pend.px:b.h>=pend.px);if(fill){const s=pend.side,ep=pend.px,d=pend.dist;pos={side:s,entry:ep,dist:d,sl:s===1?ep-d:ep+d,tp:s===1?ep+d*tpR:ep-d*tpR,entryT:b.t};pend=null;}else if(i>=pend.expire)pend=null;continue;}
+    if(!sessOK(b.t,sess))continue;
     const L=sideSig(strat.longRules,o,i,strat),Sh=sideSig(strat.shortRules,o,i,strat);
     if(L||Sh){const px=o.c[i];const dist=strat.slMode==="atr"?((o.atr?o.atr[i]:NA)*strat.sl):(strat.sl*guessPoint(px));if(!dist||isNaN(dist)||dist<=0)continue;const side=L?1:-1;
-      if(et.type==="market")pos={side,entry:px,dist,sl:side===1?px-dist:px+dist,tp:side===1?px+dist*tpR:px-dist*tpR};
+      if(et.type==="market")pos={side,entry:px,dist,sl:side===1?px-dist:px+dist,tp:side===1?px+dist*tpR:px-dist*tpR,entryT:(bars[i+1]&&bars[i+1].t!=null)?bars[i+1].t:b.t,entryBar:i+1};
       else{const atr=(o.atr?o.atr[i]:dist)||dist;const off=(et.off||0.5)*atr;const epx=et.type==="stop"?(side===1?px+off:px-off):(side===1?px-off:px+off);pend={side,px:epx,type:et.type,dist,expire:i+(et.wait||5)};}}
   }
   return trades;
@@ -4343,6 +4499,148 @@ function optimizeGenome(g,IS,minT){
   }
   return best;
 }
+
+/* ================= V3.00 VALIDATION SUITE =================
+   Three tests StrategyQuant either lacks or only half-does. All clean-room, numpy-free JS.
+   1. wfMatrix   - is the edge profitable across MANY reoptimisation schedules, or only one?
+   2. mcPrice    - would this strategy have made money on plausible FAKE histories? (per-strategy p-value)
+   3. permSearch - would my whole SEARCH have found something this good on pure noise? (search p-value)
+   #3 is the honest one for a generator: you did not test one hypothesis, you tested thousands.
+*/
+
+// light param optimiser for the matrix (27 combos; optimizeGenome's 125 is too slow to run 16-20 times)
+function optQuick(g,IS,minT){
+  const c0=cloneG(g);
+  const slV=[...new Set([c0.sl*0.75,c0.sl,c0.sl*1.25].map(x=>+x.toFixed(2)))];
+  const tpV=[...new Set([c0.tp*0.75,c0.tp,c0.tp*1.25].map(x=>+x.toFixed(2)))];
+  let pk=null;for(const ind of g.inds){if(PERIOD_KEY[ind.key]){pk={key:ind.key,param:PERIOD_KEY[ind.key]};break;}}
+  const base=pk?g.inds.find(i=>i.key===pk.key).params[pk.param]:null;
+  const perV=pk?[...new Set([0.8,1,1.25].map(m=>Math.max(3,Math.round(base*m))))]:[null];
+  let best=cloneG(g),bf=-1e18;
+  for(const sl of slV)for(const tp of tpV)for(const per of perV){
+    const c=cloneG(g);c.sl=sl;c.tp=tp;if(per!=null&&pk)c.inds.find(i=>i.key===pk.key).params[pk.param]=per;
+    const m=metrics(simulate(IS,c));const f=(m.n>=minT)?m.exp*Math.sqrt(m.n):-1e18;
+    if(f>bf){bf=f;best=c;}}
+  return best;
+}
+
+/* ---- 1. WALK-FORWARD MATRIX ----
+   A single walk-forward proves the strategy survives ONE reoptimisation schedule. The matrix runs many
+   schedules (reoptimisation runs x out-of-sample %) and asks whether it is profitable across MOST of them.
+   A strategy that only works at one specific schedule is fitted to that schedule, not to the market.
+   It also tells you how often to re-optimise live: the winning row.  */
+async function wfMatrix(bars,opts){
+  opts=opts||{};
+  const g=opts.strat||S,runsArr=opts.runs||[4,6,8,10],oosArr=opts.oos||[10,20,30,40];
+  const minT=opts.minT||5,onTick=opts.onTick||(()=>{}),stop=opts.stop||(()=>false);
+  const cells=[];let done=0;const total=runsArr.length*oosArr.length;
+  for(const R of runsArr){
+    for(const O of oosArr){
+      if(stop())return{cells,aborted:true,rate:0,valid:0,green:0,best:null,verdict:"aborted"};
+      const seg=Math.floor(bars.length/R),oosLen=Math.max(30,Math.floor(seg*O/100));
+      let all=[],wins=0,used=0;
+      for(let k=0;k<R;k++){
+        const a=k*seg,b=Math.min(bars.length,a+seg);
+        if(b-a<oosLen+120)continue;
+        const opt=optQuick(g,bars.slice(a,b-oosLen),minT);
+        const tr=simulate(bars.slice(b-oosLen,b),opt);
+        if(tr.length){used++;if(tr.reduce((x,y)=>x+y,0)>0)wins++;}
+        all=all.concat(tr);
+      }
+      const m=metrics(all);
+      cells.push({runs:R,oos:O,n:m.n||0,net:m.n?m.exp*m.n:0,pf:m.pf||0,exp:m.exp||0,segWin:used?wins/used:0,segs:used});
+      done++;onTick(done,total,cells);await sleep(0);
+    }
+  }
+  const valid=cells.filter(c=>c.n>=minT),green=valid.filter(c=>c.net>0).length;
+  const rate=valid.length?green/valid.length:0;
+  const best=valid.slice().sort((a,b)=>b.net-a.net)[0]||null;
+  return{cells,valid:valid.length,green,rate,best,
+    verdict:valid.length<4?"not enough data":rate>=0.7?"robust across schedules":rate>=0.5?"marginal":"fitted to one schedule"};
+}
+
+/* ---- 2. MONTE CARLO ON PRICE (block bootstrap) ----
+   Reshuffling trades only reorders results you already have. This rebuilds the MARKET: it resamples blocks
+   of returns - keeping each bar's shape and its real timestamp, so session and swap logic still apply -
+   producing alternative histories with the same volatility and fat tails but no genuine structure.
+   Rerunning the strategy on those gives a null distribution. Beating 95% of it means the edge is unlikely
+   to be luck; sitting in the middle of it means it is noise.  */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function permuteBars(bars,blockLen,rnd){
+  const n=bars.length;if(n<60)return bars.slice();
+  const R=[];
+  for(let i=1;i<n;i++){const p=bars[i-1].c,b=bars[i];
+    if(!(p>0)||!(b.c>0))continue;
+    R.push({r:Math.log(b.c/p),o:Math.log(Math.max(1e-9,b.o)/b.c),h:Math.log(Math.max(b.h,b.c)/b.c),l:Math.log(Math.min(b.l,b.c)/b.c),v:b.v});}
+  if(R.length<20)return bars.slice();
+  const L=Math.max(2,blockLen|0),out=[{...bars[0]}];
+  let c=bars[0].c,i=1;
+  while(i<n){
+    const st=Math.max(0,Math.floor(rnd()*(R.length-L)));
+    for(let k=0;k<L&&i<n;k++,i++){
+      const e=R[(st+k)%R.length];
+      c=c*Math.exp(e.r);
+      const bar={t:bars[i].t,c:c,o:c*Math.exp(e.o),h:c*Math.exp(e.h),l:c*Math.exp(e.l)};
+      if(e.v!=null)bar.v=e.v;
+      if(bar.h<Math.max(bar.o,bar.c))bar.h=Math.max(bar.o,bar.c);
+      if(bar.l>Math.min(bar.o,bar.c))bar.l=Math.min(bar.o,bar.c);
+      out.push(bar);}
+  }
+  return out;
+}
+async function mcPrice(bars,strat,runs,opts){
+  opts=opts||{};const onTick=opts.onTick||(()=>{}),stop=opts.stop||(()=>false);
+  const block=Math.max(5,opts.block||Math.round(bars.length/200)||20);
+  const real=metrics(simulate(bars,strat));
+  const realNet=real.n?real.exp*real.n:0;
+  const rnd=mulberry32(opts.seed||12345);const nets=[];
+  for(let k=0;k<(runs||100);k++){
+    if(stop())break;
+    const m=metrics(simulate(permuteBars(bars,block,rnd),strat));
+    nets.push(m.n?m.exp*m.n:0);
+    onTick(k+1,runs);
+    if(k%3===2)await sleep(0);
+  }
+  nets.sort((a,b)=>a-b);
+  const beat=nets.filter(x=>x<realNet).length;
+  const p=nets.length?1-beat/nets.length:1;
+  const q=f=>nets.length?nets[Math.min(nets.length-1,Math.floor(f*nets.length))]:0;
+  const thin=(real.n||0)<30;   // a strategy with a handful of trades trivially beats a noise null - that is not proof
+  return{realNet,realN:real.n||0,runs:nets.length,block,p,median:q(0.5),p5:q(0.05),p95:q(0.95),thin,
+    verdict:thin?("only "+(real.n||0)+" trades - too few to judge"):
+      p<=0.05?"very likely real":p<=0.10?"likely real":p<=0.25?"unproven":"indistinguishable from noise"};
+}
+
+/* ---- 3. SEARCH-LEVEL PERMUTATION TEST (Masters) ----
+   The strategy above is one you FOUND by searching thousands. The honest null is not "does this strategy
+   beat noise" but "would my SEARCH have found something this good on noise?" This reruns the whole search
+   on permuted price and compares the best it finds to your real champion. A high p-value means your
+   pipeline can manufacture this result out of nothing - the strategy is a search artefact.
+   This is the test that catches what PBO and Deflated Sharpe only approximate. */
+async function permSearch(bars,cfg,realFit,opts){
+  opts=opts||{};
+  const runs=opts.runs||15,pop=opts.pop||20,gens=opts.gens||8;
+  const onTick=opts.onTick||(()=>{}),stop=opts.stop||(()=>false);
+  const rnd=mulberry32(opts.seed||777);
+  const block=Math.max(5,opts.block||Math.round(bars.length/200)||20);
+  const split=Math.floor(bars.length*0.7);
+  const fits=[];
+  for(let k=0;k<runs;k++){
+    if(stop())break;
+    const pb=permuteBars(bars,block,rnd);
+    const champ=gaQuiet(pb.slice(0,split),cfg,pop,gens);
+    let f=-1e9;
+    if(champ){const m=metrics(simulate(pb.slice(split),champ));f=fitVal(m,cfg);}
+    fits.push(f);onTick(k+1,runs);await sleep(0);
+  }
+  fits.sort((a,b)=>a-b);
+  const beat=fits.filter(x=>x<realFit).length;
+  const p=fits.length?1-beat/fits.length:1;
+  return{runs:fits.length,realFit,p,best:fits.length?fits[fits.length-1]:null,
+    median:fits.length?fits[Math.floor(fits.length/2)]:null,
+    verdict:p<=0.05?"the search found a real edge":p<=0.15?"probably real, keep watching":"your search can find this in pure noise"};
+}
+
 const DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 function analyzeDaysSessions(g,bars){
   const tr=simDetailed(bars,g);
@@ -4558,7 +4856,8 @@ async function vaultBoot(){try{let all=await vAll();if(!all.length)return;const 
   fillAutoFindPairs();renderVault();
   if(purged)toast("Vault: removed "+purged+" corrupt series (wrong timeframe) — rebuild to refresh");
   if(localStorage.getItem("eaforge_vault_weekly")!=="off"){
-    for(const r of all){if(now-(r.lastUpdate||0)>7*86400000){try{await vaultUpdate(r.sym,r.tf);refreshed++;}catch(e){}}}
+    for(const r of all){if(r.source==="import")continue;   // your own imported CSVs are never replaced by a web pull
+      if(now-(r.lastUpdate||0)>7*86400000){try{await vaultUpdate(r.sym,r.tf);refreshed++;}catch(e){}}}
     if(refreshed){const b2={};for(const r of await vAll())(b2[r.sym]=b2[r.sym]||[]).push(r);for(const sym in b2)BAKED[sym]=b2[sym].sort((a,b)=>b.bars.length-a.bars.length)[0].bars;fillAutoFindPairs();renderVault();toast("Vault weekly update: refreshed "+refreshed+" pairs");}
   }}catch(e){}}
 if($("#vaultBuildD1"))$("#vaultBuildD1").onclick=()=>vaultBuild("D1");
@@ -4736,10 +5035,13 @@ if($("#fnBase"))$("#fnBase").textContent="base TF: "+S.tf;
 /* ---- Simple / Advanced mode + collapsible sections ---- */
 function renumberCards(){let cn=1;document.querySelectorAll(".card").forEach(c=>{const nEl=c.querySelector(":scope > .hd > .n");if(!nEl)return;if(c.offsetParent===null){nEl.textContent="·";return;}nEl.textContent=cn++;});}   // number only visible cards, sequential
 // Two modes: WIZARD (default) = only the 25-step Guided Wizard + generated code · EXPERT = full manual toolkit, no wizard.
-function setMode(m){document.body.classList.toggle("expert",m==="expert");$("#mAdv").classList.toggle("on",m!=="expert");$("#mExpert").classList.toggle("on",m==="expert");try{renumberCards();}catch(e){}}
-$("#mAdv").onclick=()=>setMode("adv");
-$("#mExpert").onclick=()=>setMode("expert");
-setMode("adv");   // default
+function setMode(m){document.body.classList.toggle("expert",m==="expert");
+  const a=$("#mAdv"),e=$("#mExpert");if(a)a.classList.toggle("on",m!=="expert");if(e)e.classList.toggle("on",m==="expert");
+  const t=$("#expertToggle");if(t)t.textContent=(m==="expert")?"✖ Close manual toolkit":"⚙ Open manual toolkit (not needed for the guided build)";
+  try{renumberCards();}catch(e2){}}
+window.EAF_setMode=setMode;
+setMode("adv");   // default - wizard only; the manual toolkit is opt-in from the bottom of the wizard
+try{const _et=$("#expertToggle");if(_et)_et.onclick=()=>{const on=document.body.classList.contains("expert");setMode(on?"adv":"expert");if(!on){const c=$("#introCard");if(c)c.scrollIntoView({behavior:"smooth",block:"start"});}};}catch(e){}
 const INFO_SECTIONS={
   "Backtest Lab":"<b>Backtest Lab</b> — replays a strategy over past prices to see if it would have made money. Shows win-rate, profit factor, drawdown, plus walk-forward and Monte-Carlo stress tests. <b>You don't need to touch this</b> — the AI Build wizard's Auto-evolve runs it for you.",
   "Strategy Evolver":"<b>Strategy Evolver</b> — breeds hundreds of strategy variations and keeps the ones that perform best on data they haven't seen. This is what makes each strategy genuinely different and robust, not just a template.",
@@ -4869,7 +5171,7 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
     candidates:[],base:null,kind:"ea",name:"",
     mm:{startBal:10000,mode:"pct",risk:1},gates:{markov:false,prop:false},capital:10000,
     champ:null,best:null,shortlist:[],running:false,tested:0,
-    evolved:null,researchOK:false,tfLocked:null,final:null};
+    evolved:null,researchOK:false,tfLocked:null,final:null,hardProof:null};
 
   const TITLES=["Broker","Account type","Symbol","Get market data","Trading style","Timeframe",
     "AI suggests a strategy","Analyze & lock the base","Basic setup","Indicators (AI-chosen)","Entry logic (AI-built)",
@@ -4888,14 +5190,78 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
     "Robustness gauntlet — reruns until fitness + equity match are as good as it gets, then you lock it.","Rescan every achievable timeframe; confirm the strongest.",
     "Worst-case backtest — keeps only the best setup and improves on it.","2-week, 3-month & 12-month projections: profit, DD, stability, reliability.","Save the finished EA."];
 
-  // build step shells
-  el("gwSteps").innerHTML=TITLES.map((t,i)=>{const n=i+1;return `
+  // WHY each step exists - plain English, so you always know what you are actually trying to achieve.
+  const WHYS=[
+    "Sets the real spread and commission every later number is measured against. Wrong broker = every profit figure below is fiction.",
+    "A prop account arms the drawdown guard. Get this wrong and a strategy that looks great here would blow the challenge on day 2.",
+    "Everything downstream - costs, data, indicator pool - follows this one choice.",
+    "Depth of history is the single biggest lever on whether an edge is real. Thin data = confident nonsense.",
+    "Shapes what the machine hunts for: stops, targets and entry type all follow the style.",
+    "Bar size must match both your style and the data you loaded. You cannot scalp M15 on hourly bars.",
+    "Pick the raw edge to build on. If nothing here is profitable on unseen data, no later step can rescue it - change pair, timeframe, or load deeper data.",
+    "Locks the base strategy. Everything from here refines THIS.",
+    "Names the file and decides EA (trades) vs indicator (draws only).",
+    "See exactly which indicators the machine chose, so the EA is not a black box to you.",
+    "See the actual entry conditions. If they make no sense to you, go back to step 7 and pick another.",
+    "Risk per trade decides whether you pass a challenge or blow it. This is the single most dangerous number in the app.",
+    "Regime gate and drawdown guard - the two things that stop a good strategy killing an account.",
+    "Chooses which validation blocks run. More blocks = slower but harder to fool.",
+    "Shows the exact broker specs baked into every backtest number you have seen.",
+    "Confirms the account size the dollar projections are computed from.",
+    "Freezes the dataset so the deep search below is measured on one fixed sample.",
+    "The deep hunt. Runs until you stop it. Only strategies profitable on UNSEEN data are kept.",
+    "Commit to one candidate out of the shortlist.",
+    "Hill-climbs around that candidate until it genuinely cannot improve.",
+    "Tries to break it: walk-forward, slippage, stability. Passing here is the difference between an edge and a curve-fit.",
+    "Some edges are simply stronger on another bar size. This checks every timeframe your data can support.",
+    "Re-runs under worse spread and slippage than you expect, and only keeps a version that still passes the firm rules.",
+    "The honest picture: dollars, drawdown and whether this would actually pass, from many realistic start dates.",
+    "Export the .mq5 / Pine files. Backtest in MT5 on real ticks, then demo-forward before any money."];
+  const PHASES=[
+    {n:1,name:"Set up",     from:1, to:6, goal:"Tell it where you trade, and get real data in."},
+    {n:2,name:"Discover",   from:7, to:11,goal:"The machine finds candidate edges and shows the proof."},
+    {n:3,name:"Configure",  from:12,to:17,goal:"Lock real risk, guards and broker costs."},
+    {n:4,name:"Prove",      from:18,to:23,goal:"Search deep, evolve, then try to break it."},
+    {n:5,name:"Ship",       from:24,to:25,goal:"Read the honest projection, download the EA."}];
+  const phaseOf=n=>PHASES.find(p=>n>=p.from&&n<=p.to)||PHASES[0];
+
+  const stepHtml=(n)=>`
     <div class="gw-step${n>1?' locked':''}" id="gwS${n}">
-      <div class="gw-h"><span class="gw-num">${n}</span> ${t}</div>
-      <div class="gw-d">${DESCS[i]}</div>
+      <div class="gw-h"><span class="gw-num">${n}</span> ${TITLES[n-1]}</div>
+      <div class="gw-d">${DESCS[n-1]}</div>
       <div class="gw-body" id="gwB${n}"></div>
       <div class="gw-msg" id="gwM${n}"></div>
+    </div>`;
+
+  el("gwSteps").innerHTML=PHASES.map(p=>{let h="";for(let n=p.from;n<=p.to;n++)h+=stepHtml(n);return `
+    <div class="gw-phase" id="gwP${p.n}">
+      <div class="gw-ph-h" data-ph="${p.n}"><span class="gw-ph-n">${p.n}</span><b>${p.name}</b><span class="gw-ph-g">${p.goal}</span><span class="gw-ph-s" id="gwPS${p.n}"></span></div>
+      <div class="gw-ph-b" id="gwPB${p.n}">${h}</div>
     </div>`;}).join("");
+
+  // click a phase header to fold/unfold it (finished phases fold themselves)
+  el("gwSteps").querySelectorAll(".gw-ph-h").forEach(h=>h.onclick=()=>{
+    const p=h.parentElement;p.classList.toggle("collapsed");p.dataset.manual="1";});
+
+  // ---- the permanent "what am I trying to achieve" bar ----
+  function goalLine(){
+    const b=(BROKERS[D.broker]||{}).name||D.broker;
+    let end;
+    if(D.acct==="prop"){
+      let firm=b;try{const pp=PROP_PRESETS[(S.prop&&S.prop.preset)||D.propFirm];if(pp&&pp.label)firm=pp.label;}catch(e){}
+      end="pass "+firm+" without breaching its drawdown rules";
+    } else end="make money after real "+b+" costs";
+    return "Build an EA for <b>"+D.sym+"</b> on <b>"+D.tf+"</b> that can "+end+" — proven on data it has never seen.";
+  }
+  function renderObjective(){
+    const o=el("gwObjective");if(!o)return;
+    const n=Math.min(CUR,25),p=phaseOf(n);
+    o.innerHTML=
+      '<div class="ob-r"><span class="ob-l">Goal</span><span class="ob-goal">'+goalLine()+'</span></div>'+
+      '<div class="ob-r"><span class="ob-l">Now</span><span class="ob-now">Phase '+p.n+' · '+p.name+' — step '+n+' of 25: '+TITLES[n-1]+'</span></div>'+
+      '<div class="ob-r"><span class="ob-l">Why</span><span class="ob-why">'+WHYS[n-1]+'</span></div>'+
+      '<div class="ob-bar"><div class="ob-fill" style="width:'+Math.round((n-1)/25*100)+'%"></div></div>';
+  }
 
   let CUR=1;const rendered={};
   // Wipe every step from m onward: clear their rendered content + messages + any derived results they produced,
@@ -4908,6 +5274,7 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
     if(m<=20)D.evolved=null;
     if(m<=21)D.researchOK=false;
     if(m<=22)D.tfLocked=null;
+    if(m<=21)D.hardProof=null;
     if(m<=23)D.final=null;
   }
   function setStep(n){
@@ -4917,12 +5284,20 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
       s.classList.toggle("done",i<CUR);
       s.classList.toggle("active",i===CUR);
     }
-    el("gwProg").innerHTML="Step "+Math.min(CUR,25)+" of 25 — "+TITLES[Math.min(CUR,25)-1]+' <span style="color:var(--faint)">· change an earlier step &amp; press its Confirm again to rebuild everything below</span>';
+    // phase state: finished phases fold away so the page never becomes a wall you scroll through
+    PHASES.forEach(p=>{const pe=el("gwP"+p.n);if(!pe)return;
+      const fin=CUR>p.to,act=CUR>=p.from&&CUR<=p.to;
+      pe.classList.toggle("fin",fin);pe.classList.toggle("act",act);
+      if(!pe.dataset.manual)pe.classList.toggle("collapsed",!act);
+      const st=el("gwPS"+p.n);if(st)st.textContent=fin?"✓ done":(act?("step "+CUR+" / "+p.to):"locked");});
+    renderObjective();
+    el("gwProg").innerHTML='<span style="color:var(--faint)">Change an earlier step and press its Confirm again to rebuild everything below it.</span>';
     if(!rendered[n]&&RENDER[n]){rendered[n]=1;try{RENDER[n]();}catch(e){el("gwM"+n).innerHTML='<span style="color:var(--sell)">step error: '+e.message+'</span>';}}
     const s=el("gwS"+n);if(s&&n>1)s.scrollIntoView({behavior:"smooth",block:"center"});
   }
   // confirm step n: mark done, then relock + rebuild everything after it, then open step n+1 fresh
   function done(n){el("gwM"+n).innerHTML='<span style="color:var(--buy)">✓ locked in</span> '+(el("gwM"+n).dataset.extra||"");invalidateFrom(n+1);setStep(n+1);}
+  window.EAF_wizard={setStep,done,invalidateFrom,D,PHASES,get step(){return CUR;}};   // headless render/click testing
   const ok=(n,msg)=>el("gwM"+n).innerHTML='<span style="color:var(--buy)">'+msg+'</span>';
   const warn=(n,msg)=>el("gwM"+n).innerHTML='<span style="color:var(--warn)">'+msg+'</span>';
   const B=n=>el("gwB"+n);
@@ -5043,6 +5418,52 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
         else out.innerHTML='<span style="color:var(--warn)">Could not parse '+f.name+' — need columns like Date,Time,Open,High,Low,Close (comma or tab separated).</span>';
         file.value="";};
       rd.readAsText(f);};
+    /* --- BULK IMPORT: point at a folder of CSVs (QuantDataManager / Dukascopy / MT5 exports) and every
+       file lands under its own symbol. This is how you get 10+ years of M1 - no free web API serves it,
+       and importing a folder beats uploading 20 files one at a time. Symbol is read from the filename. --- */
+    const many=$$("input");many.type="file";many.accept=".csv,.txt";many.multiple=true;many.style.display="none";
+    try{many.setAttribute("webkitdirectory","");many.setAttribute("directory","");}catch(e){}
+    const bulk=$$("button",{className:"go",textContent:"📁 Import a folder of CSVs"});bulk.style.marginLeft="8px";
+    bulk.onclick=()=>many.click();
+    function symFromName(name){
+      const b=String(name).split(/[\\/]/).pop().replace(/\.[a-z0-9]+$/i,"").toUpperCase();
+      const keys=Object.keys(INSTR).sort((a,b2)=>b2.length-a.length);
+      for(const k of keys)if(b.indexOf(k)>=0)return k;
+      const tok=(b.match(/[A-Z0-9]{3,12}/)||[b])[0];
+      return tok||null;
+    }
+    many.onchange=async()=>{
+      const files=[...many.files];if(!files.length)return;
+      let ok=0,fail=0,rows=[];
+      for(let i=0;i<files.length;i++){
+        const f=files[i];
+        if(!/\.(csv|txt)$/i.test(f.name))continue;
+        out.innerHTML='<span class="hint">reading '+(i+1)+'/'+files.length+' — '+f.name+'…</span>';
+        await sleep(0);
+        let txt="";try{txt=await f.text();}catch(e){fail++;continue;}
+        let bars=[];try{bars=parseCSV(txt);}catch(e){}
+        if(!bars||bars.length<50){fail++;continue;}
+        const sym=symFromName(f.name);
+        if(!sym){fail++;continue;}
+        if(!INSTR[sym]){try{registerSymbol(sym,"fx");}catch(e){}}
+        // merge with anything already stored for that symbol so repeated imports extend history
+        const prev=BAKED[sym]||[];
+        BAKED[sym]=(typeof mergeBars==="function"&&prev.length)?mergeBars(prev,bars):bars;
+        const gm=(typeof medianGapDays==="function")?medianGapDays(BAKED[sym])*1440:60;
+        rows.push({sym,n:BAKED[sym].length,gran:gm<60?Math.round(gm)+"min":(gm/60).toFixed(0)+"h",
+          from:BAKED[sym][0].t?new Date(BAKED[sym][0].t).toISOString().slice(0,10):"?",
+          to:BAKED[sym][BAKED[sym].length-1].t?new Date(BAKED[sym][BAKED[sym].length-1].t).toISOString().slice(0,10):"?"});
+        ok++;
+        try{if(typeof vPut==="function"){const _tf=((typeof medianGapDays==="function"?medianGapDays(BAKED[sym]):0.04)>0.5)?"D1":"H1";await vPut({key:sym+"|IMPORT",sym,tf:_tf,bars:BAKED[sym],source:"import",lastUpdate:Date.now(),...(typeof vIntegrity==="function"?vIntegrity(BAKED[sym],_tf==="D1"?1440:60):{})});}}catch(e){}
+      }
+      try{fillAutoFindPairs&&fillAutoFindPairs();}catch(e){}
+      if(BAKED[D.sym]&&typeof applyPair==="function")applyPair(D.sym);
+      out.innerHTML='<div style="color:'+(ok?"var(--buy)":"var(--warn)")+'">'+(ok?"✓ ":"")+ok+' file(s) imported'+(fail?', '+fail+' skipped (unreadable or no symbol in the filename)':'')+'</div>'+
+        (rows.length?'<table style="margin-top:5px;border-collapse:collapse;font-size:11px;font-family:var(--mono)">'+
+          rows.map(r=>'<tr><td style="padding:1px 10px 1px 0"><b>'+r.sym+'</b></td><td style="padding:1px 10px 1px 0">'+r.n.toLocaleString()+' bars</td><td style="padding:1px 10px 1px 0">'+r.gran+'</td><td style="color:var(--muted)">'+r.from+' → '+r.to+'</td></tr>').join("")+'</table>':'')+
+        '<div class="hint" style="margin-top:4px">Symbol is taken from each filename (EURUSD_M1_2019.csv → EURUSD). Re-importing merges with what you already have instead of replacing it.</div>';
+      many.value="";
+    };
     // --- one press updates EVERY pair into the persistent vault; stays current until pressed again ---
     const allBtn=$$("button",{className:"go",textContent:"⬇ Update ALL pairs (stays current)"});allBtn.style.marginLeft="8px";
     const stamp=$$("div");stamp.className="hint";stamp.style.marginTop="4px";
@@ -5055,7 +5476,7 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
       allBtn.disabled=false;allBtn.textContent="⬇ Update ALL pairs (stays current)";showStamp();};
     const upNote=$$("div");upNote.className="hint";upNote.style.marginTop="4px";
     upNote.innerHTML="For a real <b>scalp</b> (M1–M15), upload M-minute data here — free Yahoo only gives hourly. M1 is best: the app builds M5/M15/M30/H1 from it automatically.";
-    B(4).append(info,pull,up,allBtn,file,out,stamp,upNote,contBtn(4,"Use this data & continue ▸",()=>{
+    B(4).append(info,pull,up,bulk,many,allBtn,file,out,stamp,upNote,contBtn(4,"Use this data & continue ▸",()=>{
       if(!(BAKED[D.sym]&&BAKED[D.sym].length>=300)){warn(4,"Need ≥300 bars for "+D.sym+" — press Get max data, upload a CSV, or pick a bundled pair in step 3.");return;}
       el("gwM4").dataset.extra=BAKED[D.sym].length.toLocaleString()+" bars ready";done(4);}));
   };
@@ -5176,12 +5597,73 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
       else if(m==="dollar"){val.step="1";val.value=(D.mm&&D.mm.mode==="fixed")?D.mm.risk:100;lbl.textContent="$ per trade";}
       else{val.step="0.1";val.value=(D.mm&&D.mm.risk)||1;lbl.textContent="% per trade";}}
     refresh();method.onchange=refresh;
-    B(12).append(note,method,val,lbl,contBtn(12,"Confirm sizing ▸",()=>{const m=method.value,v=Math.max(0,parseFloat(val.value)||0);D.sizeMethod=m;
+
+    /* ---- EXIT TIMING: when to be flat no matter what the strategy says ----
+       Holding overnight costs swap and holding over the weekend is a gap risk many prop firms ban outright.
+       Default is "let the machine decide": each option is measured on UNSEEN data and the best one wins,
+       so this is not another setting you have to understand - it is another thing the search proves. */
+    const exNote=$$("div");exNote.className="gw-note";exNote.style.marginTop="12px";
+    exNote.innerHTML="<b>Exit timing.</b> Closing at the end of the day avoids overnight swap and gap risk; going flat before the weekend avoids the Monday gap, which several prop firms require anyway. These are now priced into the backtest, so the machine can measure which one actually earns its keep on your data.";
+    const exSel=$$("select");exSel.style.maxWidth="320px";
+    exSel.innerHTML='<option value="auto">Let the machine decide (measured on unseen data)</option>'+
+      '<option value="none">Never — hold as long as the strategy says</option>'+
+      '<option value="eod">Flat at the end of each day</option>'+
+      '<option value="fri">Flat before the weekend</option>'+
+      '<option value="eodfri">Both — daily close and weekend flat</option>'+
+      '<option value="sess">Flat when the trading session ends</option>';
+    exSel.value=D.exitMode||"auto";
+    const exOut=$$("div");exOut.style.marginTop="6px";
+    B(12).append(exNote,exSel,exOut);
+
+    function setExits(mode){
+      const cur=S.exits||{};
+      const e={bars:cur.bars||0,opposite:!!cur.opposite,eod:false,friday:null,sessEnd:false};
+      if(mode==="eod")e.eod=true;
+      else if(mode==="fri")e.friday=20;
+      else if(mode==="eodfri"){e.eod=true;e.friday=20;}
+      else if(mode==="sess")e.sessEnd=true;
+      S.exits=e;D.exitMode=mode;return e;
+    }
+    const EX_LBL={none:"no time exit",eod:"flat at end of day",fri:"flat before the weekend",eodfri:"daily close + weekend flat",sess:"flat at session end"};
+    async function chooseExits(){
+      const g=D.base||S,bars=D.OOS||D.bars;
+      if(!bars||bars.length<300){setExits("none");return null;}
+      const keep=S.exits,rows=[];
+      for(const mode of ["none","eod","fri","eodfri","sess"]){
+        if(mode==="sess"&&(!S.sess||S.sess==="off"))continue;
+        setExits(mode);
+        const m=metrics(simulate(bars,g));
+        rows.push({mode,n:m.n||0,net:m.n?m.exp*m.n:0,pf:m.pf||0,dd:m.maxDD||0});
+        await sleep(0);
+      }
+      S.exits=keep;
+      const valid=rows.filter(r=>r.n>=10);
+      const best=(valid.length?valid:rows).slice().sort((a,b)=>b.net-a.net)[0];
+      setExits(best?best.mode:"none");
+      return {rows,best};
+    }
+    exSel.onchange=()=>{if(exSel.value!=="auto"){setExits(exSel.value);exOut.innerHTML='<span class="hint">'+EX_LBL[exSel.value]+' — applied.</span>';}else exOut.innerHTML="";};
+
+    B(12).append(contBtn(12,"Confirm sizing & exits ▸",async(btn)=>{const m=method.value,v=Math.max(0,parseFloat(val.value)||0);D.sizeMethod=m;
       if(m==="lots"){D.lots=v||0.10;try{S.sizeMode="fixed";S.size=D.lots;}catch(e){}D.mm={startBal:D.capital,mode:"pct",risk:1};   // EA = fixed lots; $ chart uses a 1%/trade proxy (lot-based $ depends on your contract size — confirm on demo)
         el("gwM12").dataset.extra=D.lots+" lots/trade (fixed)";}
       else{try{S.sizeMode="riskpct";S.size=(m==="dollar"?1:v);}catch(e){}D.mm={startBal:D.capital,mode:(m==="dollar"?"fixed":m),risk:v||1};
         el("gwM12").dataset.extra=(m==="dollar"?"$"+v+"/trade":v+"% risk");}
       try{if(el("mmMode"))el("mmMode").value=D.mm.mode;if(el("mmRisk"))el("mmRisk").value=D.mm.risk;if(el("mmBal"))el("mmBal").value=D.capital;if(el("rSizeMode"))el("rSizeMode").value=S.sizeMode;if(el("rSize"))el("rSize").value=S.size;}catch(e){}
+      // exits: run the comparison if the machine is deciding, then report what it chose and why
+      if(exSel.value==="auto"){
+        btn.disabled=true;btn.textContent="Measuring exit timing…";
+        exOut.innerHTML='<span class="hint">testing 5 exit rules on unseen data…</span>';
+        let r=null;try{r=await chooseExits();}catch(e){setExits("none");}
+        btn.disabled=false;btn.textContent="Confirm sizing & exits ▸";
+        if(r&&r.rows.length){
+          exOut.innerHTML='<div class="gw-note" style="border-left-color:var(--buy)"><b style="color:var(--buy)">Chose: '+EX_LBL[r.best.mode]+'</b>'+
+            '<table style="margin-top:5px;border-collapse:collapse;font-size:11px;font-family:var(--mono)">'+
+            r.rows.map(x=>'<tr style="'+(x.mode===r.best.mode?'color:var(--buy);font-weight:700':'color:var(--muted)')+'"><td style="padding:1px 12px 1px 0">'+EX_LBL[x.mode]+'</td><td style="padding:1px 12px 1px 0">'+x.n+' trades</td><td style="padding:1px 12px 1px 0">'+x.net.toFixed(1)+'R</td><td>PF '+x.pf.toFixed(2)+'</td></tr>').join("")+
+            '</table><div class="hint" style="margin-top:4px">Measured on unseen data with swap and spread charged. Overrule it with the dropdown above if your firm requires a specific rule.</div></div>';
+        }
+      } else setExits(exSel.value);
+      el("gwM12").dataset.extra=(el("gwM12").dataset.extra||"")+" · "+(EX_LBL[D.exitMode]||"no time exit");
       try{sync&&sync();}catch(e){}done(12);}));
   };
 
@@ -5367,6 +5849,57 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
     const restore=worseCosts(0.5,0.5);const slip=metrics(simulate(bars,g));restore();const o=oosOf(g);
     const pass=pf>=3&&slip.exp>0&&o.stability>=0.85&&o.pf>=1.3;return{pf,folds,slip,o,stab:o.stability,pass};};
   const rt=g=>g.__r||(g.__r=researchTest(g));   // cache per genome so evalScore + gate don't double-compute
+  /* ===== V3.00 HARD PROOF - the three tests that separate an edge from a search artefact =====
+     Runs automatically at the end of step 21 so there is nothing extra to find or press.
+       A. Walk-forward MATRIX  - profitable across many reoptimisation schedules, not just one
+       B. Price permutation    - beats a null built from fake histories with the same statistics
+       C. Search permutation   - your SEARCH could not have found this good a result in pure noise
+     C is the one that matters most here: you did not test one idea, you tested thousands. */
+  async function hardProof(g,paint){
+    const bars=D.bars||[];
+    const res={};
+    paint&&paint('A. Walk-forward matrix — testing many reoptimisation schedules…');
+    res.wf=await wfMatrix(bars,{strat:g,runs:[4,6,8],oos:[20,30,40],minT:5,
+      onTick:(d,t)=>paint&&paint('A. Walk-forward matrix — '+d+'/'+t+' schedules…')});
+    paint&&paint('B. Price permutation — rebuilding fake histories…');
+    res.mc=await mcPrice(bars,g,80,{seed:11,onTick:(k,t)=>paint&&paint('B. Price permutation — '+k+'/'+t+' fake histories…')});
+    paint&&paint('C. Search permutation — rerunning the whole search on noise…');
+    const split=Math.floor(bars.length*0.7);
+    const realFit=fitVal(metrics(simulate(bars.slice(split),g)),D.cfg);
+    res.ps=await permSearch(bars,D.cfg,realFit,{runs:12,pop:20,gens:8,seed:23,
+      onTick:(k,t)=>paint&&paint('C. Search permutation — '+k+'/'+t+' noise searches…')});
+    res.passA=res.wf.rate>=0.6;
+    res.passB=!res.mc.thin&&res.mc.p<=0.10;
+    res.passC=res.ps.p<=0.15;
+    res.score=(res.passA?1:0)+(res.passB?1:0)+(res.passC?1:0);
+    return res;
+  }
+  function hardProofHTML(h){
+    if(!h)return"";
+    const row=(ok,name,detail,mean)=>
+      '<tr><td style="padding:4px 8px 4px 0;color:'+(ok?'var(--buy)':'var(--sell)')+';font-weight:700">'+(ok?'PASS':'FAIL')+'</td>'+
+      '<td style="padding:4px 10px 4px 0;white-space:nowrap"><b>'+name+'</b></td>'+
+      '<td style="padding:4px 10px 4px 0;font-family:var(--mono);font-size:11px">'+detail+'</td>'+
+      '<td style="padding:4px 0;color:var(--muted);font-size:11px">'+mean+'</td></tr>';
+    const wf=h.wf,mc=h.mc,ps=h.ps;
+    const heat=wf.cells.map(c=>'<span title="'+c.runs+' runs · '+c.oos+'% OOS · '+c.n+' trades" style="display:inline-block;width:26px;height:16px;margin:1px;border-radius:3px;background:'+
+      (c.n<5?'var(--faint)':c.net>0?'color-mix(in srgb,var(--buy) '+Math.min(90,25+c.net*3)+'%,transparent)':'color-mix(in srgb,var(--sell) '+Math.min(90,25+Math.abs(c.net)*3)+'%,transparent)')+
+      '"></span>').join('');
+    const col=h.score===3?'var(--buy)':h.score===2?'var(--warn)':'var(--sell)';
+    return '<div class="gw-note" style="border-left-color:'+col+'"><b style="color:'+col+'">Hard proof — '+h.score+' of 3 passed</b>'+
+      '<table style="margin-top:6px;border-collapse:collapse;width:100%">'+
+      row(h.passA,'Walk-forward matrix',(wf.rate*100).toFixed(0)+'% of '+wf.valid+' schedules profitable',wf.verdict+(wf.best?' · best schedule: '+wf.best.runs+' reopts / '+wf.best.oos+'% OOS':''))+
+      row(h.passB,'Price permutation','p='+mc.p.toFixed(3)+' vs '+mc.runs+' fake histories',mc.verdict)+
+      row(h.passC,'Search permutation','p='+ps.p.toFixed(3)+' vs '+ps.runs+' searches on noise',ps.verdict)+
+      '</table>'+
+      '<div style="margin-top:7px">'+heat+'</div>'+
+      '<div style="margin-top:5px;font-size:11px;color:var(--muted)">Each square is one reoptimisation schedule — green = profitable out-of-sample, red = losing, grey = too few trades. '+
+      'The search-permutation p-value is the honest one: it asks whether this whole pipeline could have produced a result this good from noise alone. '+
+      (h.score===3?'All three passed — this is as close to proof as a backtest gets. Demo-forward it next.':
+       h.score===0?'Nothing passed. This is a search artefact, not an edge — change pair, timeframe, or load deeper data.':
+       'Mixed. Treat it as a candidate, not a proven edge — demo-forward before any money.')+'</div></div>';
+  }
+
   RENDER[21]=()=>{const btn=$$("button",{className:"go",textContent:"🔬 Find a robust one"});const out=$$("div");out.style.marginTop="8px";
     const card=(r,head)=>`<div class="gw-note" style="border-left-color:${r.pass?'var(--buy)':'var(--warn)'}"><b style="color:${r.pass?'var(--buy)':'var(--warn)'}">${head}</b><br>Walk-forward ${r.pf}/${r.folds} · worse-fills exp ${r.slip.exp.toFixed(3)} · stability ${r.stab.toFixed(2)} · PF ${r.o.pf.toFixed(2)} · net ${r.o.net.toFixed(1)}R</div>`;
     async function hunt(){D.running=true;btn.textContent="■ Stop";
@@ -5377,7 +5910,16 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
       out.innerHTML=card(r,r.pass?'✓ Robust strategy found — fitness & equity match confirmed':'Not robust on this data yet');
       // clear old controls
       ["gwCont21","gwMore21","gwAcc21"].forEach(id=>{const e=el(id);if(e)e.remove();});
-      if(r.pass){const cb=contBtn(21,"Confirm & lock this in ▸",()=>done(21));cb.id="gwCont21";B(21).append(cb);}
+      if(r.pass){
+        const hp=$$("div");hp.style.marginTop="8px";B(21).append(hp);
+        hp.innerHTML='<div class="hint">Robust — now running hard proof (3 tests)…</div>';
+        try{D.hardProof=await hardProof(res.best,t=>{hp.innerHTML='<div class="hint">'+t+'</div>';});}
+        catch(e){D.hardProof=null;hp.innerHTML='<div class="hint" style="color:var(--warn)">hard proof failed: '+e.message+'</div>';}
+        if(D.hardProof)hp.innerHTML=hardProofHTML(D.hardProof);
+        const sc=D.hardProof?D.hardProof.score:-1;
+        const cb=contBtn(21,sc>=2?"Confirm & lock this in ▸":"Continue anyway — not proven ▸",()=>done(21));
+        if(sc<2)cb.className="ghost";
+        cb.id="gwCont21";B(21).append(cb);}
       else{out.innerHTML+=`<div class="hint" style="color:var(--warn)">The AI couldn't reach full robustness on ${D.sym} ${D.tf} with this data. Best move: <b>pull deeper data (step 4)</b> or <b>try another timeframe (step 22)</b> — a robust edge may simply not exist here. Keep searching if you like.</div>`;
         const more=$$("button",{className:"go",textContent:"🔁 Keep searching"});more.id="gwMore21";more.onclick=()=>{["gwMore21","gwAcc21"].forEach(id=>{const e=el(id);if(e)e.remove();});hunt();};
         const acc=$$("button",{className:"ghost",textContent:"Accept closest anyway"});acc.id="gwAcc21";acc.style.marginLeft="8px";acc.onclick=()=>done(21);
@@ -5775,5 +6317,5 @@ const _wiz=document.querySelector("#aiGen")?.closest(".card");if(_wiz)_wiz.class
   }
 })();
 </script>
-
-</body></html>
+</body>
+</html>
