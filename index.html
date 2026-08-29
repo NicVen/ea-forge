@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-store">
-<title>EA Forge V3.05 — AI Algorithm Builder</title>
+<title>EA Forge V3.06 — AI Algorithm Builder</title>
 </head>
 <body>
 <style>
@@ -216,13 +216,13 @@
 
 
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<title>EA Forge V3.05 — AI Algorithm Builder</title>
+<title>EA Forge V3.06 — AI Algorithm Builder</title>
 <div class="wrap">
 <header>
   <div class="brand">
     <div class="mark">EA</div>
     <div>
-      <b>EA Forge <span id="appVer" class="verpill">V3.05</span></b><br><span>algorithm builder · mt5 + pine</span>
+      <b>EA Forge <span id="appVer" class="verpill">V3.06</span></b><br><span>algorithm builder · mt5 + pine</span>
     </div>
   </div>
   <div class="spacer"></div>
@@ -1138,7 +1138,7 @@
 
 <script>
 "use strict";
-const APP_VERSION="V3.05";   // single source of truth — bump on every change (small: +0.01 · major: next integer .00). Mirror in package.json.
+const APP_VERSION="V3.06";   // single source of truth — bump on every change (small: +0.01 · major: next integer .00). Mirror in package.json.
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 try{const _v=document.querySelector("#appVer");if(_v)_v.textContent=APP_VERSION;document.title="EA Forge "+APP_VERSION+" — AI Algorithm Builder";}catch(e){}
 const toast=(m)=>{const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),1800);};
@@ -5043,7 +5043,8 @@ async function dukaRun(opts){
               if(day.length){
                 let mn=Infinity,mx=-Infinity;
                 for(const b of day){if(b.c<mn)mn=b.c;if(b.c>mx)mx=b.c;}
-                const flat=(mx-mn)<=Math.abs(mn)*1e-6;                  // a whole day at one price = filler file
+                // a placeholder is a FULL day that never moves; a real thin session is short, not flat-and-long
+                const flat=(mx-mn)<=Math.abs(mn)*1e-6 && day.length>=600;                  // a whole day at one price = filler file
                 const jump=lastClose>0?Math.max(day[0].o/lastClose,lastClose/day[0].o):1;
                 if(flat||jump>5){
                   junk++;
